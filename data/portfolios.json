@@ -6,6 +6,27 @@
     "createdAt": "2026-06-29T15:59:32.646Z",
     "assets": [
       {
+        "id": "1782764879332-5sh0e9",
+        "symbol": "SPY",
+        "name": "S&P 500",
+        "type": "etf",
+        "price": 740.92,
+        "transactions": [
+          {
+            "id": "1782764903585-k0yp5a",
+            "type": "buy",
+            "price": 740.9,
+            "date": "2026-06-29",
+            "notes": "",
+            "assetId": "1782764879332-5sh0e9",
+            "assetSymbol": "SPY",
+            "assetName": "S&P 500",
+            "assetType": "etf",
+            "quantity": 1
+          }
+        ]
+      },
+      {
         "id": "1782754049059-s709az",
         "symbol": "BTC",
         "name": "Bitcoin",
@@ -109,6 +130,18 @@
       }
     ],
     "transactions": [
+      {
+        "id": "1782764903585-k0yp5a",
+        "type": "buy",
+        "price": 740.9,
+        "date": "2026-06-29",
+        "notes": "",
+        "assetId": "1782764879332-5sh0e9",
+        "assetSymbol": "SPY",
+        "assetName": "S&P 500",
+        "assetType": "etf",
+        "quantity": 1
+      },
       {
         "id": "1782754333271-ijicmr",
         "type": "sell",

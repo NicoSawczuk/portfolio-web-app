@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { Asset, Portfolio, Transaction, TransactionType } from "@/lib/portfolio";
+import PortfolioMetricCard from "@/components/PortfolioMetricCard";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("de-DE", {
@@ -428,20 +429,14 @@ export default function PortfolioDetailPage() {
             </div>
             {portfolioPerformance ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Total</p>
-                    <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{formatCurrency(portfolioPerformance.totalMarketValue)}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                    <span className="text-slate-600 dark:text-slate-300">USD</span>
-                    <span className={`font-semibold ${portfolioPerformance.totalPnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                      {formatCurrency(portfolioPerformance.totalPnl)}
-                    </span>
-                    <span className={`font-semibold ${portfolioPerformance.totalPnlPct >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                      ({formatPercent(portfolioPerformance.totalPnlPct)})
-                    </span>
-                  </div>
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:gap-3">
+                  <PortfolioMetricCard title="Total" value={formatCurrency(portfolioPerformance.totalMarketValue)} subtitle="USD" />
+                  <PortfolioMetricCard
+                    title="Variación"
+                    value={formatCurrency(portfolioPerformance.totalPnl)}
+                    subtitle={formatPercent(portfolioPerformance.totalPnlPct)}
+                    tone={portfolioPerformance.totalPnl >= 0 ? "positive" : "negative"}
+                  />
                 </div>
               </div>
             ) : null}

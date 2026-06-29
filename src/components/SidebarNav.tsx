@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const items = [
   { href: "/", label: "Portfolios", description: "Administrar carteras", icon: "📊" },
   { href: "/assets", label: "Activos", description: "Gestionar activos", icon: "🏷️" },
+  { href: "/export", label: "Exportar", description: "Exportar transacciones", icon: "📤" },
 ];
 
 export default function SidebarNav() {
