@@ -1,0 +1,158 @@
+[
+  {
+    "id": "1782748772646-ujxv98",
+    "name": "Jubilacion",
+    "description": "",
+    "createdAt": "2026-06-29T15:59:32.646Z",
+    "assets": [
+      {
+        "id": "1782754049059-s709az",
+        "symbol": "BTC",
+        "name": "Bitcoin",
+        "type": "crypto",
+        "price": 60000,
+        "transactions": [
+          {
+            "id": "1782754132974-y4lm8z",
+            "type": "buy",
+            "price": 59870.09,
+            "date": "2026-06-02",
+            "notes": "",
+            "assetId": "1782754049059-s709az",
+            "assetSymbol": "BTC",
+            "assetName": "Bitcoin",
+            "assetType": "crypto",
+            "quantity": 0.000008
+          }
+        ]
+      },
+      {
+        "id": "1782753995620-7zfhmb",
+        "symbol": "AAPL",
+        "name": "Apple",
+        "type": "stock",
+        "price": 281.01,
+        "transactions": [
+          {
+            "id": "1782754333271-ijicmr",
+            "type": "sell",
+            "price": 290,
+            "date": "2026-06-29",
+            "notes": "",
+            "assetId": "1782753995620-7zfhmb",
+            "assetSymbol": "AAPL",
+            "assetName": "Apple",
+            "assetType": "stock",
+            "quantity": 0.134516
+          },
+          {
+            "id": "1782754080208-w1g7t9",
+            "type": "buy",
+            "price": 279.78,
+            "date": "2026-06-01",
+            "notes": "",
+            "assetId": "1782753995620-7zfhmb",
+            "assetSymbol": "AAPL",
+            "assetName": "Apple",
+            "assetType": "stock",
+            "quantity": 0.234516
+          }
+        ]
+      },
+      {
+        "id": "1782750074508-6gwhm2",
+        "symbol": "BTC",
+        "name": "Bitcoin",
+        "type": "crypto",
+        "price": 0,
+        "transactions": []
+      },
+      {
+        "id": "1782750066279-k4w160",
+        "symbol": "AMD",
+        "name": "Amd",
+        "type": "stock",
+        "price": 0,
+        "transactions": []
+      },
+      {
+        "id": "1782750053167-hp5xi3",
+        "symbol": "SPY",
+        "name": "S&P 500",
+        "type": "etf",
+        "price": 0,
+        "transactions": []
+      },
+      {
+        "id": "1782750028714-3635yl",
+        "symbol": "NVDA",
+        "name": "Nvidia",
+        "type": "stock",
+        "price": 0,
+        "transactions": []
+      },
+      {
+        "id": "1782750022467-wsqxna",
+        "symbol": "MELI",
+        "name": "MercadoLibre",
+        "type": "stock",
+        "price": 0,
+        "transactions": []
+      },
+      {
+        "id": "1782750013406-0sfkuk",
+        "symbol": "AAPL",
+        "name": "Apple",
+        "type": "stock",
+        "price": 0,
+        "transactions": []
+      }
+    ],
+    "transactions": [
+      {
+        "id": "1782754333271-ijicmr",
+        "type": "sell",
+        "price": 290,
+        "date": "2026-06-29",
+        "notes": "",
+        "assetId": "1782753995620-7zfhmb",
+        "assetSymbol": "AAPL",
+        "assetName": "Apple",
+        "assetType": "stock",
+        "quantity": 0.134516
+      },
+      {
+        "id": "1782754132974-y4lm8z",
+        "type": "buy",
+        "price": 59870.09,
+        "date": "2026-06-02",
+        "notes": "",
+        "assetId": "1782754049059-s709az",
+        "assetSymbol": "BTC",
+        "assetName": "Bitcoin",
+        "assetType": "crypto",
+        "quantity": 0.000008
+      },
+      {
+        "id": "1782754080208-w1g7t9",
+        "type": "buy",
+        "price": 279.78,
+        "date": "2026-06-01",
+        "notes": "",
+        "assetId": "1782753995620-7zfhmb",
+        "assetSymbol": "AAPL",
+        "assetName": "Apple",
+        "assetType": "stock",
+        "quantity": 0.234516
+      }
+    ]
+  },
+  {
+    "id": "1782748659716-n8oo49",
+    "name": "General",
+    "description": "Portfolio general",
+    "createdAt": "2026-06-29T15:57:39.716Z",
+    "assets": [],
+    "transactions": []
+  }
+]

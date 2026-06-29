@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1782754049059-s709az",
+    "symbol": "BTC",
+    "name": "Bitcoin",
+    "type": "crypto",
+    "price": 60000,
+    "transactions": []
+  },
+  {
+    "id": "1782754030188-rjhu09",
+    "symbol": "3M",
+    "name": "3M",
+    "type": "stock",
+    "price": 163,
+    "transactions": []
+  },
+  {
+    "id": "1782753995620-7zfhmb",
+    "symbol": "AAPL",
+    "name": "Apple",
+    "type": "stock",
+    "price": 271.01,
+    "transactions": []
+  }
+]
