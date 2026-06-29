@@ -7,16 +7,20 @@ import { getPortfolioSummary } from "@/lib/portfolio-summary";
 import PortfolioMetricCard from "@/components/PortfolioMetricCard";
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "USD",
+  const formatter = new Intl.NumberFormat("de-DE", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
-  }).format(value);
+  });
+  const prefix = value < 0 ? "-" : "";
+  return `${prefix}USD ${formatter.format(Math.abs(value))}`;
 }
 
 function formatPercent(value: number) {
-  return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
+  const formatter = new Intl.NumberFormat("de-DE", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  });
+  return `${value >= 0 ? "+" : "-"}${formatter.format(Math.abs(value * 100))}%`;
 }
 
 function formatDate(dateString: string) {
@@ -44,11 +48,15 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
   const router = useRouter();
   const [portfolios, setPortfolios] = useState(initialPortfolios);
   const [assets, setAssets] = useState(initialAssets);
+  const [showAmounts, setShowAmounts] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPortfolio, setEditingPortfolio] = useState<Portfolio | null>(null);
   const [formState, setFormState] = useState(emptyPortfolio());
+
+  const formatCurrencyByVisibility = (value: number) => (showAmounts ? formatCurrency(value) : "••••••");
+  const formatPercentByVisibility = (value: number) => (showAmounts ? formatPercent(value) : "••••");
 
   const portfolioSummaries = useMemo(
     () => portfolios.map((portfolio) => ({ portfolio, summary: getPortfolioSummary(portfolio, assets) })),
@@ -152,9 +160,14 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500"
+            aria-label="Agregar portfolio"
+            title="Agregar portfolio"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500"
           >
-            + Nuevo portfolio
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
           </button>
         </div>
 
@@ -174,11 +187,26 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
         ) : (
           <div className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
+              <div className="flex items-center gap-3">
+                <div>
                 <h2 className="text-xl font-semibold">Portfolios</h2>
                 <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                   Elegí un portfolio para ver sus transacciones y entrar al detalle.
                 </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAmounts((value) => !value)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                  aria-label={showAmounts ? "Ocultar montos" : "Mostrar montos"}
+                  title={showAmounts ? "Ocultar montos" : "Mostrar montos"}
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                    <circle cx="12" cy="12" r="3" />
+                    {!showAmounts ? <path d="M3 3l18 18" /> : null}
+                  </svg>
+                </button>
               </div>
             </div>
 
@@ -197,11 +225,11 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
 
                   <div className="flex flex-col items-start gap-3 lg:min-w-[290px] lg:items-end">
                     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                      <PortfolioMetricCard title="Total" value={formatCurrency(summary?.totalMarketValue ?? 0)} subtitle="USD" compact />
+                      <PortfolioMetricCard title="Total" value={formatCurrencyByVisibility(summary?.totalMarketValue ?? 0)} subtitle="USD" compact />
                       <PortfolioMetricCard
                         title="Variación"
-                        value={formatCurrency(summary?.totalPnl ?? 0)}
-                        subtitle={formatPercent(summary?.totalPnlPct ?? 0)}
+                        value={formatCurrencyByVisibility(summary?.totalPnl ?? 0)}
+                        subtitle={formatPercentByVisibility(summary?.totalPnlPct ?? 0)}
                         tone={(summary?.totalPnl ?? 0) >= 0 ? "positive" : "negative"}
                         compact
                       />
@@ -214,9 +242,14 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                           event.stopPropagation();
                           openEditModal(portfolio);
                         }}
-                        className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                        aria-label="Editar portfolio"
+                        title="Editar portfolio"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-300 text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                       >
-                        Editar
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
+                        </svg>
                       </button>
                       <button
                         type="button"
@@ -224,9 +257,17 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                           event.stopPropagation();
                           handleDelete(portfolio.id);
                         }}
-                        className="rounded-xl border border-rose-300 px-3 py-1.5 text-sm font-medium text-rose-700 transition hover:bg-rose-50 dark:border-rose-700/60 dark:text-rose-300 dark:hover:bg-rose-950/50"
+                        aria-label="Eliminar portfolio"
+                        title="Eliminar portfolio"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-300 text-rose-700 transition hover:bg-rose-50 dark:border-rose-700/60 dark:text-rose-300 dark:hover:bg-rose-950/50"
                       >
-                        Eliminar
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                          <path d="M10 11v6" />
+                          <path d="M14 11v6" />
+                        </svg>
                       </button>
                     </div>
                   </div>

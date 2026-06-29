@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Asset, Portfolio, Transaction } from "@/lib/portfolio";
 
 interface ExportRow {
@@ -26,41 +26,17 @@ function escapeCsv(value: string | number | undefined) {
   return /[",\n]/.test(normalized) ? `"${normalized.replace(/"/g, '""')}"` : normalized;
 }
 
-export default function TransactionsExportPanel() {
-  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [selectedPortfolioIds, setSelectedPortfolioIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+interface TransactionsExportPanelProps {
+  initialPortfolios: Portfolio[];
+  initialAssets: Asset[];
+}
+
+export default function TransactionsExportPanel({ initialPortfolios, initialAssets }: TransactionsExportPanelProps) {
+  const [portfolios] = useState<Portfolio[]>(initialPortfolios);
+  const [assets] = useState<Asset[]>(initialAssets);
+  const [selectedPortfolioIds, setSelectedPortfolioIds] = useState<string[]>(() => initialPortfolios.map((portfolio) => portfolio.id));
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [portfoliosResponse, assetsResponse] = await Promise.all([fetch("/api/portfolios"), fetch("/api/assets")]);
-
-        if (!portfoliosResponse.ok) {
-          throw new Error("No se pudieron cargar los portfolios.");
-        }
-
-        if (!assetsResponse.ok) {
-          throw new Error("No se pudieron cargar los activos.");
-        }
-
-        const portfoliosData = (await portfoliosResponse.json()) as Portfolio[];
-        const assetsData = (await assetsResponse.json()) as Asset[];
-        setPortfolios(portfoliosData);
-        setAssets(assetsData);
-        setSelectedPortfolioIds(portfoliosData.map((portfolio) => portfolio.id));
-      } catch (err) {
-        setError(String(err));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
 
   const selectedPortfolios = useMemo(
     () => portfolios.filter((portfolio) => selectedPortfolioIds.includes(portfolio.id)),
@@ -186,7 +162,7 @@ export default function TransactionsExportPanel() {
         <button
           type="button"
           onClick={handleExport}
-          disabled={loading || exporting || rows.length === 0}
+          disabled={exporting || rows.length === 0}
           className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-sky-600 dark:hover:bg-sky-500"
         >
           {exporting ? "Exportando..." : "Exportar transacciones"}
@@ -228,9 +204,7 @@ export default function TransactionsExportPanel() {
         </div>
 
         <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
-          {loading ? (
-            <p>Cargando datos para exportar...</p>
-          ) : rows.length === 0 ? (
+          {rows.length === 0 ? (
             <p>No hay transacciones para exportar con los portfolios seleccionados.</p>
           ) : (
             <p>Se exportarán {rows.length} transacciones con datos del portfolio y el activo.</p>

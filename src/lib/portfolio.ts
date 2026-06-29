@@ -19,7 +19,10 @@ export interface Asset {
   symbol: string;
   name: string;
   type: AssetType;
+  id_partner?: number;
   price: number;
+  priceSource?: "live" | "local";
+  quoteUpdatedAt?: string;
   transactions: Transaction[];
 }
 

@@ -16,6 +16,54 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Finnhub Integration
+
+This project can fetch live asset prices from Finnhub using the `/quote` endpoint.
+
+Required environment variables in `.env.local`:
+
+```bash
+FINNHUB_API_BASE_URL=https://finnhub.io/api/v1
+FINNHUB_API_TOKEN=YOUR_TOKEN
+FINNHUB_QUOTES_REFRESH_MINUTES=15
+COINMARKETCAP_API_BASE_URL=https://pro-api.coinmarketcap.com
+COINMARKETCAP_API_KEY=YOUR_TOKEN
+```
+
+Service location:
+
+- `src/lib/finnhub-service.ts`
+
+Main functions:
+
+- `getQuote(symbol)`
+- `getCurrentPrice(symbol)`
+- `hydrateAssetsWithFinnhubQuotes(assets)`
+
+Current usage in the app:
+
+- `GET /api/assets` enriches stored assets with live prices:
+	- Finnhub for `stock` and `etf`.
+	- CoinMarketCap for mapped `crypto` symbols.
+- Quotes are refreshed only when stale according to `FINNHUB_QUOTES_REFRESH_MINUTES` (default: 15), avoiding calls on every page visit.
+- If providers are not configured or fail for a symbol, the persisted local asset price is used as fallback.
+
+## CoinMarketCap Crypto Mapping
+
+CoinMarketCap authentication is sent via header:
+
+- `X-CMC_PRO_API_KEY: COINMARKETCAP_API_KEY`
+
+For crypto assets, quote mapping now prioritizes `id_partner` on each asset.
+If `id_partner` is empty, it falls back to symbol mapping.
+
+Mapped symbol defaults used by `src/lib/coinmarketcap-service.ts`:
+
+- `BTC` -> `1`
+- `USDT` -> `825`
+- `BNB` -> `1839`
+- `ETH` -> `1027`
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

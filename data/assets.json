@@ -1,10 +1,80 @@
 [
   {
+    "id": "1782772451639-zhwk9a",
+    "symbol": "USDT",
+    "name": "Tether",
+    "type": "crypto",
+    "id_partner": 825,
+    "price": 0.9984760524115384,
+    "transactions": [],
+    "quoteUpdatedAt": "2026-06-29T22:34:15.951Z"
+  },
+  {
+    "id": "1782772428947-jxn1f4",
+    "symbol": "BNB",
+    "name": "BNB",
+    "type": "crypto",
+    "id_partner": 1839,
+    "price": 560.3174855908169,
+    "transactions": [],
+    "quoteUpdatedAt": "2026-06-29T22:34:15.951Z"
+  },
+  {
+    "id": "1782772312545-95ivjz",
+    "symbol": "ETH",
+    "name": "Ethereum",
+    "type": "crypto",
+    "id_partner": 1027,
+    "price": 1615.3055082063286,
+    "transactions": [],
+    "quoteUpdatedAt": "2026-06-29T22:34:15.951Z"
+  },
+  {
+    "id": "1782767933813-zedcq7",
+    "symbol": "SM",
+    "name": "SM Energy",
+    "type": "stock",
+    "price": 26.14,
+    "transactions": []
+  },
+  {
+    "id": "1782767933813-d1qisg",
+    "symbol": "NOW",
+    "name": "ServiceNow",
+    "type": "stock",
+    "price": 99.97,
+    "transactions": []
+  },
+  {
+    "id": "1782767933813-3ev4m4",
+    "symbol": "IBM",
+    "name": "IBM",
+    "type": "stock",
+    "price": 278,
+    "transactions": []
+  },
+  {
+    "id": "1782767933813-vxqmvh",
+    "symbol": "DVN",
+    "name": "Devon Energy",
+    "type": "stock",
+    "price": 41.99,
+    "transactions": []
+  },
+  {
+    "id": "1782767933813-4f358s",
+    "symbol": "BKR",
+    "name": "Baker Hughes",
+    "type": "stock",
+    "price": 56.31,
+    "transactions": []
+  },
+  {
     "id": "1782764879332-5sh0e9",
     "symbol": "SPY",
     "name": "S&P 500",
     "type": "etf",
-    "price": 740.92,
+    "price": 741,
     "transactions": []
   },
   {
@@ -12,7 +82,7 @@
     "symbol": "MELI",
     "name": "MercadoLibre",
     "type": "stock",
-    "price": 1689.48,
+    "price": 1683.13,
     "transactions": []
   },
   {
@@ -20,23 +90,209 @@
     "symbol": "BTC",
     "name": "Bitcoin",
     "type": "crypto",
-    "price": 60000,
-    "transactions": []
-  },
-  {
-    "id": "1782754030188-rjhu09",
-    "symbol": "3M",
-    "name": "3M",
-    "type": "stock",
-    "price": 163,
-    "transactions": []
+    "price": 60346.686791421074,
+    "transactions": [],
+    "id_partner": 1,
+    "quoteUpdatedAt": "2026-06-29T22:34:15.951Z"
   },
   {
     "id": "1782753995620-7zfhmb",
     "symbol": "AAPL",
     "name": "Apple",
     "type": "stock",
-    "price": 271.01,
+    "price": 281.74,
+    "transactions": []
+  },
+  {
+    "id": "1782861001001-amd001",
+    "symbol": "AMD",
+    "name": "Advanced Micro Devices",
+    "type": "stock",
+    "price": 539.49,
+    "transactions": []
+  },
+  {
+    "id": "1782861001002-ggal01",
+    "symbol": "GGAL",
+    "name": "Grupo Financiero Galicia",
+    "type": "stock",
+    "price": 50.9,
+    "transactions": []
+  },
+  {
+    "id": "1782861001003-qqq001",
+    "symbol": "QQQ",
+    "name": "Invesco QQQ Trust",
+    "type": "etf",
+    "price": 724.08,
+    "transactions": []
+  },
+  {
+    "id": "1782861001004-cat001",
+    "symbol": "CAT",
+    "name": "Caterpillar",
+    "type": "stock",
+    "price": 1033.19,
+    "transactions": []
+  },
+  {
+    "id": "1782861001005-ttwo01",
+    "symbol": "TTWO",
+    "name": "Take-Two Interactive",
+    "type": "stock",
+    "price": 247.15,
+    "transactions": []
+  },
+  {
+    "id": "1782861001006-nvda01",
+    "symbol": "NVDA",
+    "name": "NVIDIA",
+    "type": "stock",
+    "price": 194.97,
+    "transactions": []
+  },
+  {
+    "id": "1782861001007-ypf001",
+    "symbol": "YPF",
+    "name": "YPF",
+    "type": "stock",
+    "price": 45.25,
+    "transactions": []
+  },
+  {
+    "id": "1782861001008-jpm001",
+    "symbol": "JPM",
+    "name": "JPMorgan Chase",
+    "type": "stock",
+    "price": 329.39,
+    "transactions": []
+  },
+  {
+    "id": "1782861001009-eog001",
+    "symbol": "EOG",
+    "name": "EOG Resources",
+    "type": "stock",
+    "price": 131.93,
+    "transactions": []
+  },
+  {
+    "id": "1782861001010-pam001",
+    "symbol": "PAM",
+    "name": "Pampa Energia",
+    "type": "stock",
+    "price": 81.9,
+    "transactions": []
+  },
+  {
+    "id": "1782861001011-ma0001",
+    "symbol": "MA",
+    "name": "Mastercard",
+    "type": "stock",
+    "price": 509.64,
+    "transactions": []
+  },
+  {
+    "id": "1782861001012-dia001",
+    "symbol": "DIA",
+    "name": "SPDR Dow Jones Industrial Average ETF Trust",
+    "type": "etf",
+    "price": 521.68,
+    "transactions": []
+  },
+  {
+    "id": "1782861001013-bp0001",
+    "symbol": "BP",
+    "name": "BP p.l.c.",
+    "type": "stock",
+    "price": 37.35,
+    "transactions": []
+  },
+  {
+    "id": "1782861001014-sgov01",
+    "symbol": "SGOV",
+    "name": "iShares 0-3 Month Treasury Bond ETF",
+    "type": "etf",
+    "price": 100.67,
+    "transactions": []
+  },
+  {
+    "id": "1782861001015-shy001",
+    "symbol": "SHY",
+    "name": "iShares 1-3 Year Treasury Bond ETF",
+    "type": "etf",
+    "price": 82.17,
+    "transactions": []
+  },
+  {
+    "id": "1782861001016-slb001",
+    "symbol": "SLB",
+    "name": "Schlumberger",
+    "type": "stock",
+    "price": 46.38,
+    "transactions": []
+  },
+  {
+    "id": "1782861001017-fcx001",
+    "symbol": "FCX",
+    "name": "Freeport-McMoRan",
+    "type": "stock",
+    "price": 61.62,
+    "transactions": []
+  },
+  {
+    "id": "1782861001018-msft01",
+    "symbol": "MSFT",
+    "name": "Microsoft",
+    "type": "stock",
+    "price": 368.57,
+    "transactions": []
+  },
+  {
+    "id": "1782861001019-meta01",
+    "symbol": "META",
+    "name": "Meta Platforms",
+    "type": "stock",
+    "price": 562.6,
+    "transactions": []
+  },
+  {
+    "id": "1782861001020-crm001",
+    "symbol": "CRM",
+    "name": "Salesforce",
+    "type": "stock",
+    "price": 157.93,
+    "transactions": []
+  },
+  {
+    "id": "1782861001021-amzn01",
+    "symbol": "AMZN",
+    "name": "Amazon",
+    "type": "stock",
+    "price": 240.14,
+    "transactions": []
+  },
+  {
+    "id": "1782861001022-googl1",
+    "symbol": "GOOGL",
+    "name": "Alphabet Class A",
+    "type": "stock",
+    "price": 353.65,
+    "transactions": []
+  },
+  {
+    "id": "1782861001023-intc01",
+    "symbol": "INTC",
+    "name": "Intel",
+    "type": "stock",
+    "price": 131.72,
+    "transactions": []
+  },
+  {
+    "id": "1782861001024-ko0001",
+    "symbol": "KO",
+    "name": "Coca-Cola",
+    "type": "stock",
+    "price": 82.65,
     "transactions": []
   }
 ]
