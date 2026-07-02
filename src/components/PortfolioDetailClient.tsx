@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Asset, Portfolio, Transaction, TransactionType } from "@/lib/portfolio";
-import PortfolioMetricCard from "@/components/PortfolioMetricCard";
+import PortfolioValuationCard from "@/components/PortfolioValuationCard";
 
 function formatCurrency(value: number) {
   const formatter = new Intl.NumberFormat("de-DE", {
@@ -74,6 +74,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [transactionForm, setTransactionForm] = useState(emptyTransactionForm());
+  const [transactionSearchQuery, setTransactionSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "symbol" | "price" | "quantity">("date");
   const [transactionsPerPage, setTransactionsPerPage] = useState<10 | 20 | 50 | 100>(20);
   const [currentPage, setCurrentPage] = useState(1);
@@ -286,15 +287,31 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     return rows;
   }, [sortBy, transactionRows]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedTransactions.length / transactionsPerPage));
+  const filteredTransactions = useMemo(() => {
+    const query = transactionSearchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return sortedTransactions;
+    }
+
+    return sortedTransactions.filter((transaction) => {
+      return (
+        transaction.assetSymbol.toLowerCase().includes(query) ||
+        transaction.assetName.toLowerCase().includes(query) ||
+        transaction.assetType.toLowerCase().includes(query)
+      );
+    });
+  }, [sortedTransactions, transactionSearchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / transactionsPerPage));
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * transactionsPerPage;
-    return sortedTransactions.slice(startIndex, startIndex + transactionsPerPage);
-  }, [currentPage, sortedTransactions, transactionsPerPage]);
+    return filteredTransactions.slice(startIndex, startIndex + transactionsPerPage);
+  }, [currentPage, filteredTransactions, transactionsPerPage]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy, transactionsPerPage, transactionRows.length]);
+  }, [sortBy, transactionSearchQuery, transactionsPerPage, transactionRows.length]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -410,7 +427,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
           <Link href="/" className="text-sm font-medium text-sky-600 hover:text-sky-700">
@@ -424,30 +441,12 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
               </p>
             </div>
             {portfolioPerformance ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAmounts((value) => !value)}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                    aria-label={showAmounts ? "Ocultar montos" : "Mostrar montos"}
-                    title={showAmounts ? "Ocultar montos" : "Mostrar montos"}
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
-                      <circle cx="12" cy="12" r="3" />
-                      {!showAmounts ? <path d="M3 3l18 18" /> : null}
-                    </svg>
-                  </button>
-                  <PortfolioMetricCard title="Total" value={formatCurrencyByVisibility(portfolioPerformance.totalMarketValue)} subtitle="USD" />
-                  <PortfolioMetricCard
-                    title="Variación"
-                    value={formatCurrencyByVisibility(portfolioPerformance.totalPnl)}
-                    subtitle={formatPercentByVisibility(portfolioPerformance.totalPnlPct)}
-                    tone={portfolioPerformance.totalPnl >= 0 ? "positive" : "negative"}
-                  />
-                </div>
-              </div>
+              <PortfolioValuationCard
+                totalMarketValue={portfolioPerformance.totalMarketValue}
+                totalPnl={portfolioPerformance.totalPnl}
+                totalPnlPct={portfolioPerformance.totalPnlPct}
+                showAmounts={showAmounts}
+              />
             ) : null}
           </div>
         </div>
@@ -455,11 +454,21 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
         {portfolioPerformance ? (
           <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
+              <div className="flex items-center gap-3">
                 <h2 className="text-xl font-semibold">Rendimientos</h2>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                  Valuación en USD y análisis visual del portfolio.
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAmounts((value) => !value)}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:h-8 sm:w-8"
+                  aria-label={showAmounts ? "Ocultar montos" : "Mostrar montos"}
+                  title={showAmounts ? "Ocultar montos" : "Mostrar montos"}
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                    <circle cx="12" cy="12" r="3" />
+                    {!showAmounts ? <path d="M3 3l18 18" /> : null}
+                  </svg>
+                </button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="inline-flex rounded-full bg-slate-200 p-1 dark:bg-slate-800">
@@ -478,9 +487,6 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                     Composición
                   </button>
                 </div>
-                <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                  Moneda: USD
-                </div>
               </div>
             </div>
 
@@ -490,7 +496,6 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h3 className="text-lg font-semibold">Evolución de la valuación</h3>
-                      <p className="mt-1 text-sm text-slate-500">Líneas por activo y total del portfolio</p>
                     </div>
                     <div className="text-sm text-slate-500">Fechas de movimientos</div>
                   </div>
@@ -546,9 +551,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         <span className="font-semibold text-slate-800 dark:text-slate-100">{hoveredChartPoint.label}</span>
                         <span className="text-slate-600 dark:text-slate-300">Valor: {formatCurrencyByVisibility(hoveredChartPoint.value)}</span>
                       </div>
-                    ) : (
-                      <div className="text-sm text-slate-500">Pasa el cursor sobre la gráfica para ver el valor en USD por fecha.</div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -630,19 +633,28 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
           </div>
         ) : null}
 
-        <div className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold">Transacciones</h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                Listado cronológico con opción de editar o eliminar.
-              </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <div className="relative">
+                <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input
+                  value={transactionSearchQuery}
+                  onChange={(event) => setTransactionSearchQuery(event.target.value)}
+                  placeholder="Buscar activo"
+                  className="h-8 rounded-lg border border-slate-300 bg-slate-50 pl-8 pr-2 text-xs text-slate-700 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-sky-400 sm:h-10 sm:rounded-2xl sm:pr-3 sm:text-sm"
+                />
+              </div>
               <select
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value as "date" | "symbol" | "price" | "quantity")}
-                className="rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                className="h-8 rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-auto sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm"
               >
                 <option value="date">Fecha</option>
                 <option value="symbol">Símbolo</option>
@@ -652,7 +664,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
               <select
                 value={transactionsPerPage}
                 onChange={(event) => setTransactionsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100)}
-                className="rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                className="h-8 rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-auto sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm"
               >
                 <option value={10}>10 por página</option>
                 <option value={20}>20 por página</option>
@@ -664,9 +676,9 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 onClick={openCreateTransactionModal}
                 aria-label="Agregar transacción"
                 title="Agregar transacción"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 sm:h-10 sm:w-10 sm:rounded-2xl"
               >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M12 5v14" />
                   <path d="M5 12h14" />
                 </svg>
@@ -674,13 +686,13 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
             </div>
           </div>
 
-          {sortedTransactions.length === 0 ? (
-            <div className="mt-6 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              No hay transacciones cargadas aún.
+          {filteredTransactions.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400 sm:mt-6 sm:p-6">
+              {transactionSearchQuery.trim() ? "No hay transacciones para ese activo." : "No hay transacciones cargadas aún."}
             </div>
           ) : (
-            <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200/70 dark:border-slate-800">
-              <div className="grid grid-cols-[1fr_0.8fr_0.9fr_0.9fr_0.8fr_0.3fr] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:bg-slate-950/80 dark:text-slate-400">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200/70 dark:border-slate-800 sm:mt-6">
+              <div className="grid min-w-[540px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.22fr] gap-1 bg-slate-50 px-1.5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-950/80 dark:text-slate-400 sm:min-w-[620px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-xs sm:tracking-[0.2em]">
                 <div>Fecha</div>
                 <div>Tipo</div>
                 <div>Símbolo</div>
@@ -690,10 +702,10 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {paginatedTransactions.map((transaction) => (
-                  <div key={transaction.id} className="grid grid-cols-[1fr_0.8fr_0.9fr_0.9fr_0.8fr_0.3fr] gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
+                  <div key={transaction.id} className="grid min-w-[540px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.22fr] gap-1 px-1.5 py-2 text-[11px] text-slate-700 dark:text-slate-200 sm:min-w-[620px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-sm">
                     <div>{transaction.date}</div>
                     <div>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:px-2.5 sm:py-1 sm:text-xs">
                         {getTransactionTypeLabel(transaction.type)}
                       </span>
                     </div>
@@ -706,7 +718,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         onClick={() => openEditTransactionModal(transaction)}
                         aria-label="Editar transacción"
                         title="Editar transacción"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-300 text-sky-600 transition hover:bg-slate-50 hover:text-sky-700 dark:border-slate-700 dark:text-sky-400 dark:hover:bg-slate-800"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 text-sky-600 transition hover:bg-slate-50 hover:text-sky-700 dark:border-slate-700 dark:text-sky-400 dark:hover:bg-slate-800 sm:h-8 sm:w-8 sm:rounded-xl"
                       >
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M12 20h9" />
@@ -718,7 +730,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         onClick={() => handleDeleteTransaction(transaction.id)}
                         aria-label="Eliminar transacción"
                         title="Eliminar transacción"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-300 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 dark:border-rose-700/60 dark:text-rose-400 dark:hover:bg-rose-950/50"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-300 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 dark:border-rose-700/60 dark:text-rose-400 dark:hover:bg-rose-950/50 sm:h-8 sm:w-8 sm:rounded-xl"
                       >
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M3 6h18" />
@@ -735,17 +747,17 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
             </div>
           )}
 
-          {sortedTransactions.length > 0 ? (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Página {currentPage} de {totalPages} ({sortedTransactions.length} transacciones)
+          {filteredTransactions.length > 0 ? (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 sm:mt-4 sm:gap-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                Página {currentPage} de {totalPages} ({filteredTransactions.length} transacciones)
               </p>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setCurrentPage((value) => Math.max(1, value - 1))}
                   disabled={currentPage === 1}
-                  className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:rounded-xl sm:px-3 sm:py-1.5 sm:text-sm"
                 >
                   Anterior
                 </button>
@@ -753,7 +765,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                   type="button"
                   onClick={() => setCurrentPage((value) => Math.min(totalPages, value + 1))}
                   disabled={currentPage >= totalPages}
-                  className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:rounded-xl sm:px-3 sm:py-1.5 sm:text-sm"
                 >
                   Siguiente
                 </button>

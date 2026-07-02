@@ -232,15 +232,12 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
   }, [currentPage, totalPages]);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <div className="flex flex-col gap-4 rounded-[28px] border border-slate-200/70 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:gap-4 sm:p-8 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.24em] text-sky-600">Módulo</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">Activos</h1>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Creá activos globales y luego vinculálos a un portfolio desde una transacción.
-            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -249,9 +246,9 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
               disabled={refreshingQuotes}
               aria-label="Refrescar cotizaciones"
               title="Refrescar cotizaciones"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 sm:h-11 sm:w-11 sm:rounded-2xl"
             >
-              <svg viewBox="0 0 24 24" className={`h-5 w-5 ${refreshingQuotes ? "animate-spin" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className={`h-4 w-4 sm:h-5 sm:w-5 ${refreshingQuotes ? "animate-spin" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 12a9 9 0 1 1-2.64-6.36" />
                 <path d="M21 3v6h-6" />
               </svg>
@@ -261,9 +258,9 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
               onClick={() => openAssetEditor()}
               aria-label="Agregar activo"
               title="Agregar activo"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 sm:h-11 sm:w-11 sm:rounded-2xl"
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 5v14" />
                 <path d="M5 12h14" />
               </svg>
@@ -277,13 +274,10 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
           </div>
         ) : null}
 
-        <div className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Activos creados</h2>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                  Listado global de activos disponibles para las transacciones.
-                </p>
               </div>
               <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                 <div className="relative flex-1 sm:max-w-[220px]">
@@ -295,13 +289,13 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Buscar"
-                    className="h-9 w-full rounded-xl border border-slate-300 bg-slate-50 pl-8 pr-3 text-sm text-slate-700 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-sky-400"
+                    className="h-8 w-full rounded-lg border border-slate-300 bg-slate-50 pl-8 pr-2 text-xs text-slate-700 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-sky-400 sm:h-9 sm:rounded-xl sm:pr-3 sm:text-sm"
                   />
                 </div>
                 <select
                   value={assetsPerPage}
                   onChange={(event) => setAssetsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100)}
-                  className="h-9 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="h-8 rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-9 sm:rounded-xl sm:px-3 sm:text-sm"
                 >
                   <option value={10}>10</option>
                   <option value={20}>20</option>
@@ -314,11 +308,11 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
             <div className="mt-6 divide-y divide-slate-100 dark:divide-slate-800">
               {filteredAssets.length ? (
                 paginatedAssets.map((asset) => (
-                  <div key={asset.id} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+                  <div key={asset.id} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:gap-3 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-semibold" title={asset.name}>{asset.symbol}</p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       <div className="flex flex-col items-start gap-1">
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -335,7 +329,7 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                           </span>
                         ) : null}
                       </div>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:px-3 sm:py-1 sm:text-xs">
                         {assetTypes.find((item) => item.value === asset.type)?.label}
                       </span>
                       <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{formatPrice(asset.price)}</span>
@@ -344,7 +338,7 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                         onClick={() => openAssetEditor(asset)}
                         aria-label={`Editar ${asset.symbol}`}
                         title={`Editar ${asset.symbol}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-300 text-sky-600 transition hover:bg-slate-50 hover:text-sky-700 dark:border-slate-700 dark:text-sky-400 dark:hover:bg-slate-800"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 text-sky-600 transition hover:bg-slate-50 hover:text-sky-700 dark:border-slate-700 dark:text-sky-400 dark:hover:bg-slate-800 sm:h-8 sm:w-8 sm:rounded-xl"
                       >
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M12 20h9" />
@@ -356,7 +350,7 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                         onClick={() => handleDeleteAsset(asset.id)}
                         aria-label={`Eliminar ${asset.symbol}`}
                         title={`Eliminar ${asset.symbol}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-rose-300 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 dark:border-rose-700/60 dark:text-rose-400 dark:hover:bg-rose-950/50"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-300 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 dark:border-rose-700/60 dark:text-rose-400 dark:hover:bg-rose-950/50 sm:h-8 sm:w-8 sm:rounded-xl"
                       >
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M3 6h18" />
@@ -377,8 +371,8 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
             </div>
 
             {filteredAssets.length > 0 ? (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 sm:mt-4 sm:gap-3">
+                <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
                   Página {currentPage} de {totalPages} ({filteredAssets.length} activos)
                 </p>
                 <div className="flex items-center gap-2">

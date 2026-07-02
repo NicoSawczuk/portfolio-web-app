@@ -150,20 +150,17 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
   };
 
   return (
-    <section className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <section className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium uppercase tracking-[0.24em] text-sky-600">Exportación</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Exportar transacciones</h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-            Descargá un archivo CSV listo para abrir en Excel con la información de cada transacción, su activo y su portfolio.
-          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:mt-2 sm:text-3xl">Exportar transacciones</h1>
         </div>
         <button
           type="button"
           onClick={handleExport}
           disabled={exporting || rows.length === 0}
-          className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-sky-600 dark:hover:bg-sky-500"
+          className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-sky-600 dark:hover:bg-sky-500 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
         >
           {exporting ? "Exportando..." : "Exportar transacciones"}
         </button>
@@ -175,13 +172,10 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
         </div>
       ) : null}
 
-      <div className="mt-6 space-y-4">
-        <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
+      <div className="mt-4 space-y-3 sm:mt-6 sm:space-y-4">
+        <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300 sm:p-4 sm:text-sm">
           <p className="font-semibold text-slate-800 dark:text-slate-100">Seleccioná los portfolios</p>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Podés elegir uno o varios portfolios para exportar sus transacciones.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
             {portfolios.map((portfolio) => {
               const isSelected = selectedPortfolioIds.includes(portfolio.id);
 
@@ -190,7 +184,7 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
                   key={portfolio.id}
                   type="button"
                   onClick={() => togglePortfolioSelection(portfolio.id)}
-                  className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition sm:px-3 sm:py-1.5 sm:text-sm ${
                     isSelected
                       ? "border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-400 dark:bg-sky-950/60 dark:text-sky-300"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -203,7 +197,7 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
+        <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300 sm:p-4 sm:text-sm">
           {rows.length === 0 ? (
             <p>No hay transacciones para exportar con los portfolios seleccionados.</p>
           ) : (
