@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
 import { readPortfolios, writePortfolios } from "@/lib/portfolio-db";
 import { readAssets } from "@/lib/asset-db";
 import type { Asset, Portfolio, Transaction, TransactionType } from "@/lib/portfolio";
+
+function createObjectId() {
+  return new ObjectId().toHexString();
+}
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -53,7 +58,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const portfolio = portfolios[portfolioIndex];
     const nextTransaction: Transaction = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: createObjectId(),
       type,
       price: Number(price ?? 0),
       date,
@@ -112,7 +117,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const portfolio = portfolios[portfolioIndex];
   const nextAsset: Asset = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createObjectId(),
     symbol: symbol.trim().toUpperCase(),
     name: name.trim(),
     type,

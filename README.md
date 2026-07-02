@@ -16,6 +16,17 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## MongoDB Atlas Integration
+
+The app now uses MongoDB as the persistence layer.
+
+Required environment variables in `.env.local`:
+
+```bash
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster-url>/?retryWrites=true&w=majority
+MONGODB_DATABASE=portfolio_web_app
+```
+
 ## Finnhub Integration
 
 This project can fetch live asset prices from Finnhub using the `/quote` endpoint.

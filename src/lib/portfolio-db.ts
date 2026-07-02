@@ -1,22 +1,30 @@
-import fs from "fs/promises";
-import path from "path";
+import { Collection, ObjectId } from "mongodb";
+import { getDb } from "@/lib/mongodb";
 import { Portfolio } from "@/lib/portfolio";
 
-const dataPath = path.join(process.cwd(), "data", "portfolios.json");
+const collectionName = "portfolios";
 
-async function ensureDataFile() {
-  try {
-    await fs.access(dataPath);
-  } catch {
-    await fs.mkdir(path.dirname(dataPath), { recursive: true });
-    await fs.writeFile(dataPath, "[]", "utf-8");
+let portfoliosCollectionPromise: Promise<Collection<Portfolio>> | null = null;
+
+async function getPortfoliosCollection() {
+  if (!portfoliosCollectionPromise) {
+    portfoliosCollectionPromise = (async () => {
+      const db = await getDb();
+      const collection = db.collection<Portfolio>(collectionName);
+      await collection.createIndex({ id: 1 }, { unique: true });
+      await collection.createIndex({ createdAt: -1 });
+      return collection;
+    })();
   }
+
+  return portfoliosCollectionPromise;
 }
 
 export async function readPortfolios(): Promise<Portfolio[]> {
-  await ensureDataFile();
-  const fileContent = await fs.readFile(dataPath, "utf-8");
-  return (JSON.parse(fileContent) as Portfolio[]).map((portfolio) => ({
+  const collection = await getPortfoliosCollection();
+  const portfolios = await collection.find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+
+  return portfolios.map((portfolio) => ({
     ...portfolio,
     assets: portfolio.assets ?? [],
     transactions: portfolio.transactions ?? [],
@@ -24,10 +32,36 @@ export async function readPortfolios(): Promise<Portfolio[]> {
 }
 
 export async function writePortfolios(portfolios: Portfolio[]) {
-  await ensureDataFile();
-  await fs.writeFile(dataPath, JSON.stringify(portfolios, null, 2), "utf-8");
+  const collection = await getPortfoliosCollection();
+  const normalizedPortfolios = portfolios.map((portfolio) => ({
+    ...portfolio,
+    id: portfolio.id || new ObjectId().toHexString(),
+    assets: portfolio.assets ?? [],
+    transactions: portfolio.transactions ?? [],
+  }));
+
+  if (normalizedPortfolios.length === 0) {
+    await collection.deleteMany({});
+    return;
+  }
+
+  await collection.bulkWrite(
+    normalizedPortfolios.map((portfolio) => ({
+      updateOne: {
+        filter: { id: portfolio.id },
+        update: { $set: portfolio },
+        upsert: true,
+      },
+    }))
+  );
+
+  await collection.deleteMany({
+    id: {
+      $nin: normalizedPortfolios.map((portfolio) => portfolio.id),
+    },
+  });
 }
 
 export function createPortfolioId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return new ObjectId().toHexString();
 }
