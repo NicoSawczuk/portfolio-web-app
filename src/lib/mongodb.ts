@@ -11,6 +11,10 @@ if (!MONGODB_DATABASE) {
   throw new Error("Falta configurar MONGODB_DATABASE.");
 }
 
+if (MONGODB_URI.includes("${")) {
+  throw new Error("MONGODB_URI contiene placeholders sin expandir. En Vercel debes guardar el URI final completo.");
+}
+
 declare global {
   var __mongoClientPromise: Promise<MongoClient> | undefined;
 }
