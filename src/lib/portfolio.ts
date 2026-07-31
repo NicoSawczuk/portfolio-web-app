@@ -22,6 +22,7 @@ export interface Asset {
   id_partner?: number;
   price: number;
   priceSource?: "live" | "local";
+  quoteCheckedAt?: string;
   quoteUpdatedAt?: string;
   transactions: Transaction[];
 }
@@ -30,6 +31,7 @@ export interface Portfolio {
   id: string;
   name: string;
   description: string;
+  managesCash?: boolean;
   createdAt: string;
   assets: Asset[];
   transactions: Transaction[];

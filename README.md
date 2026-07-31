@@ -20,6 +20,12 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 The app now uses MongoDB as the persistence layer.
 
+Important:
+
+- Runtime persistence (API and UI) uses MongoDB only.
+- `data/portfolios.json` and `data/assets.json` are legacy files used only by import scripts.
+- They are not the source of truth for the running app.
+
 Required environment variables in `.env.local`:
 
 ```bash
