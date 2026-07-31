@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAssetId, deleteAssetById, insertAsset, readAssets, updateAssetById, writeAssets } from "@/lib/asset-db";
 import { refreshAssetsQuotesWithCache } from "@/lib/finnhub-service";
+import { getSessionFromRequest } from "@/lib/auth";
 import type { Asset } from "@/lib/portfolio";
 
 function normalizePartnerId(value: unknown) {
@@ -17,6 +18,11 @@ function normalizePartnerId(value: unknown) {
 }
 
 export async function GET(request: Request) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const requestUrl = new URL(request.url);
   const forceRefreshRaw = requestUrl.searchParams.get("forceRefresh")?.toLowerCase();
   const forceRefresh = forceRefreshRaw === "1" || forceRefreshRaw === "true";
@@ -38,6 +44,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const body = await request.json();
   const { symbol, name, type, price, id_partner } = body as {
     symbol: string;
@@ -71,6 +82,11 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const body = await request.json();
   const { id, symbol, name, type, price, id_partner } = body as {
     id: string;
@@ -106,6 +122,11 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const { id } = (await request.json()) as { id: string };
 
   if (!id) {
