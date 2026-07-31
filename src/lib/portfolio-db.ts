@@ -26,6 +26,7 @@ export async function readPortfolios(): Promise<Portfolio[]> {
 
   return portfolios.map((portfolio) => ({
     ...portfolio,
+    managesCash: Boolean(portfolio.managesCash),
     assets: portfolio.assets ?? [],
     transactions: portfolio.transactions ?? [],
   }));

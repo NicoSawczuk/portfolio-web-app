@@ -91,8 +91,45 @@ export function calculatePortfolioPerformance(
 
   const holdings = new Map<string, PortfolioHoldingSummary>();
   const sortedTransactions = [...(portfolio.transactions ?? [])].sort((a, b) => a.date.localeCompare(b.date));
+  const managesCash = Boolean(portfolio.managesCash);
+  let cashBalance = 0;
+  let cashNetContributions = 0;
 
-  sortedTransactions.forEach((transaction) => applyTransactionToHoldings(holdings, transaction));
+  const getCashMovement = (transaction: Transaction) => {
+    const amount = Number(transaction.price ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return { balanceDelta: 0, contributionDelta: 0 };
+    }
+
+    if (transaction.type === "cash_in") {
+      return { balanceDelta: amount, contributionDelta: amount };
+    }
+
+    if (transaction.type === "cash_out") {
+      return { balanceDelta: -amount, contributionDelta: -amount };
+    }
+
+    if (transaction.type === "buy" || transaction.type === "sell") {
+      const quantity = Number(transaction.quantity ?? 0);
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        return { balanceDelta: 0, contributionDelta: 0 };
+      }
+
+      const tradeAmount = quantity * amount;
+      return { balanceDelta: transaction.type === "buy" ? -tradeAmount : tradeAmount, contributionDelta: 0 };
+    }
+
+    return { balanceDelta: 0, contributionDelta: 0 };
+  };
+
+  sortedTransactions.forEach((transaction) => {
+    applyTransactionToHoldings(holdings, transaction);
+    if (managesCash) {
+      const movement = getCashMovement(transaction);
+      cashBalance += movement.balanceDelta;
+      cashNetContributions += movement.contributionDelta;
+    }
+  });
 
   const holdingsList = Array.from(holdings.values())
     .filter((item) => item.quantity > 0)
@@ -115,8 +152,28 @@ export function calculatePortfolioPerformance(
     })
     .sort((a, b) => b.marketValue - a.marketValue);
 
+  if (managesCash) {
+    const normalizedCashBalance = Math.abs(cashBalance) < 1e-8 ? 0 : cashBalance;
+    holdingsList.unshift({
+      assetId: `cash:${portfolio.id}`,
+      symbol: "USD",
+      name: "Efectivo",
+      type: "cash",
+      quantity: normalizedCashBalance,
+      totalCost: normalizedCashBalance,
+      avgBuyPrice: 1,
+      currentPrice: 1,
+      marketValue: normalizedCashBalance,
+      costBasis: normalizedCashBalance,
+      pnl: 0,
+      pnlPct: 0,
+    });
+  }
+
   const totalMarketValue = holdingsList.reduce((sum, item) => sum + item.marketValue, 0);
-  const totalCostBasis = holdingsList.reduce((sum, item) => sum + item.costBasis, 0);
+  const totalCostBasis = managesCash
+    ? cashNetContributions
+    : holdingsList.reduce((sum, item) => sum + item.costBasis, 0);
   const totalPnl = totalMarketValue - totalCostBasis;
   const totalPnlPct = totalCostBasis > 0 ? totalPnl / totalCostBasis : 0;
 
@@ -141,6 +198,7 @@ export function calculatePortfolioPerformance(
 
   const dates = Object.keys(transactionsByDate).sort();
   const chartHoldings = new Map<string, { assetId: string; quantity: number; totalCost: number; avgBuyPrice: number }>();
+  let chartCashBalance = 0;
 
   const applyChartTransaction = (transaction: Transaction) => {
     if (!transaction.assetId) {
@@ -177,11 +235,17 @@ export function calculatePortfolioPerformance(
   };
 
   dates.forEach((date) => {
-    transactionsByDate[date]?.forEach(applyChartTransaction);
+    transactionsByDate[date]?.forEach((transaction) => {
+      applyChartTransaction(transaction);
+      if (managesCash) {
+        const movement = getCashMovement(transaction);
+        chartCashBalance += movement.balanceDelta;
+      }
+    });
     const value = Array.from(chartHoldings.values()).reduce((sum, item) => {
       const assetMeta = assets.find((asset) => asset.id === item.assetId);
       return sum + item.quantity * (assetMeta?.price ?? 0);
-    }, 0);
+    }, managesCash ? chartCashBalance : 0);
     chartPoints.push({ label: date, value });
   });
 

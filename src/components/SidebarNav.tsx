@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const items = [
-  { href: "/", label: "Portfolios", description: "Administrar carteras", icon: "📊" },
+  { href: "/", label: "Home", description: "Página principal", icon: "🏠" },
+  { href: "/portfolios", label: "Portfolios", description: "Administrar carteras", icon: "📊" },
   { href: "/assets", label: "Activos", description: "Gestionar activos", icon: "🏷️" },
   { href: "/export", label: "Exportar", description: "Exportar transacciones", icon: "📤" },
 ];
@@ -29,7 +30,8 @@ export default function SidebarNav() {
 
       <nav className="mt-4 flex gap-1.5 lg:mt-6 lg:gap-2 lg:flex-col">
         {items.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
 
           return (
             <Link

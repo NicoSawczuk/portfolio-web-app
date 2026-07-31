@@ -116,6 +116,7 @@ export async function refreshAssetsQuotesWithCache(
   }
 
   const nowMs = Date.now();
+  const checkedAtIso = new Date(nowMs).toISOString();
   const refreshMs = getQuoteRefreshMs();
   const forceRefresh = options?.forceRefresh ?? false;
   const quoteBySymbol = new Map<string, { price: number; updatedAt: string }>();
@@ -172,7 +173,7 @@ export async function refreshAssetsQuotesWithCache(
       return {
         ...asset,
         priceSource: "local" as const,
-        quoteUpdatedAt: undefined,
+        quoteCheckedAt: checkedAtIso,
       };
     }
 
@@ -185,6 +186,7 @@ export async function refreshAssetsQuotesWithCache(
         ...asset,
         price: refreshedQuote.price,
         priceSource: "live" as const,
+        quoteCheckedAt: checkedAtIso,
         quoteUpdatedAt: refreshedQuote.updatedAt,
       };
     }
@@ -193,13 +195,14 @@ export async function refreshAssetsQuotesWithCache(
       return {
         ...asset,
         priceSource: "live" as const,
+        quoteCheckedAt: checkedAtIso,
       };
     }
 
     return {
       ...asset,
       priceSource: "local" as const,
-      quoteUpdatedAt: undefined,
+      quoteCheckedAt: checkedAtIso,
     };
   });
 
@@ -209,12 +212,16 @@ export async function refreshAssetsQuotesWithCache(
     return {
       ...asset,
       price: hydratedAsset.price,
+      quoteCheckedAt: hydratedAsset.quoteCheckedAt,
       quoteUpdatedAt: hydratedAsset.quoteUpdatedAt,
     };
   });
 
   const hasPersistenceChanges = persistedAssets.some(
-    (asset, index) => asset.price !== assets[index]?.price || asset.quoteUpdatedAt !== assets[index]?.quoteUpdatedAt
+    (asset, index) =>
+      asset.price !== assets[index]?.price ||
+      asset.quoteCheckedAt !== assets[index]?.quoteCheckedAt ||
+      asset.quoteUpdatedAt !== assets[index]?.quoteUpdatedAt
   );
 
   return {

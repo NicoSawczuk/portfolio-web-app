@@ -9,7 +9,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { name, description } = body as { name: string; description?: string };
+  const { name, description, managesCash } = body as {
+    name: string;
+    description?: string;
+    managesCash?: boolean;
+  };
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "El nombre es obligatorio." }, { status: 400 });
@@ -20,6 +24,7 @@ export async function POST(request: Request) {
     id: createPortfolioId(),
     name: name.trim(),
     description: description?.trim() ?? "",
+    managesCash: Boolean(managesCash),
     createdAt: new Date().toISOString(),
     assets: [],
     transactions: [],
@@ -32,7 +37,12 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   const body = await request.json();
-  const { id, name, description } = body as { id: string; name: string; description?: string };
+  const { id, name, description, managesCash } = body as {
+    id: string;
+    name: string;
+    description?: string;
+    managesCash?: boolean;
+  };
 
   if (!id) {
     return NextResponse.json({ error: "El ID es obligatorio." }, { status: 400 });
@@ -53,6 +63,7 @@ export async function PUT(request: Request) {
     ...portfolios[index],
     name: name.trim(),
     description: description?.trim() ?? "",
+    managesCash: Boolean(managesCash),
   };
 
   await writePortfolios(portfolios);

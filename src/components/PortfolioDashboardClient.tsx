@@ -18,6 +18,7 @@ function emptyPortfolio(): Omit<Portfolio, "id" | "createdAt" | "assets"> {
   return {
     name: "",
     description: "",
+    managesCash: false,
     transactions: [],
   };
 }
@@ -30,7 +31,7 @@ interface PortfolioDashboardClientProps {
 export default function PortfolioDashboardClient({ initialPortfolios, initialAssets }: PortfolioDashboardClientProps) {
   const router = useRouter();
   const [portfolios, setPortfolios] = useState(initialPortfolios);
-  const [assets, setAssets] = useState(initialAssets);
+  const [assets] = useState(initialAssets);
   const [showAmounts, setShowAmounts] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +53,12 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
 
   const openEditModal = (portfolio: Portfolio) => {
     setEditingPortfolio(portfolio);
-    setFormState({ name: portfolio.name, description: portfolio.description, transactions: portfolio.transactions ?? [] });
+    setFormState({
+      name: portfolio.name,
+      description: portfolio.description,
+      managesCash: Boolean(portfolio.managesCash),
+      transactions: portfolio.transactions ?? [],
+    });
     setError(null);
     setIsModalOpen(true);
   };
@@ -64,7 +70,7 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
     setError(null);
   };
 
-  const handleChange = (field: keyof typeof formState, value: string) => {
+  const handleChange = (field: keyof typeof formState, value: string | boolean) => {
     setFormState((current) => ({ ...current, [field]: value }));
   };
 
@@ -184,10 +190,18 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
               </div>
             </div>
 
-            <div className="mt-6 divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="mt-6 space-y-3">
               {portfolioSummaries.map(({ portfolio, summary }) => (
-                <div key={portfolio.id} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-                  <button type="button" onClick={() => router.push(`/portfolios/${portfolio.id}`)} className="min-w-0 flex-1 text-left">
+                <div
+                  key={portfolio.id}
+                  className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/70"
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/portfolios/${portfolio.id}`)}
+                    className="-m-2 min-w-0 flex-1 rounded-xl p-2 text-left outline-none transition hover:bg-slate-100/70 focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-900/70"
+                  >
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-base font-semibold">{portfolio.name}</h3>
                     </div>
@@ -242,6 +256,7 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                       </button>
                     </div>
                   </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -286,6 +301,16 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                   onChange={(event) => handleChange("description", event.target.value)}
                   className="mt-2 min-h-[110px] w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
                   placeholder="Opcional"
+                />
+              </label>
+
+              <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <span>Gestionar efectivo en este portfolio</span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(formState.managesCash)}
+                  onChange={(event) => handleChange("managesCash", event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 dark:border-slate-600 dark:bg-slate-900"
                 />
               </label>
             </div>

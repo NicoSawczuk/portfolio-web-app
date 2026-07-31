@@ -41,6 +41,20 @@ function formatQuoteUpdatedAt(value?: string) {
   });
 }
 
+function getQuoteCheckedLabel(asset: Asset) {
+  const checkedAt = formatQuoteUpdatedAt(asset.quoteCheckedAt);
+  if (checkedAt) {
+    return `Consultado ${checkedAt}`;
+  }
+
+  const updatedAt = formatQuoteUpdatedAt(asset.quoteUpdatedAt);
+  if (updatedAt) {
+    return `Consultado ${updatedAt}`;
+  }
+
+  return "Consulta sin fecha";
+}
+
 const assetTypes: Array<{ value: Asset["type"]; label: string }> = [
   { value: "stock", label: "Acción" },
   { value: "etf", label: "ETF" },
@@ -202,16 +216,23 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
   const filteredAssets = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    if (!query) {
-      return assets;
-    }
+    const matchedAssets = !query
+      ? assets
+      : assets.filter((asset) => {
+          return (
+            asset.symbol.toLowerCase().includes(query) ||
+            asset.name.toLowerCase().includes(query) ||
+            asset.type.toLowerCase().includes(query)
+          );
+        });
 
-    return assets.filter((asset) => {
-      return (
-        asset.symbol.toLowerCase().includes(query) ||
-        asset.name.toLowerCase().includes(query) ||
-        asset.type.toLowerCase().includes(query)
-      );
+    return [...matchedAssets].sort((a, b) => {
+      const bySymbol = a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
+      if (bySymbol !== 0) {
+        return bySymbol;
+      }
+
+      return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
     });
   }, [assets, searchQuery]);
 
@@ -323,11 +344,9 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                         >
                           {asset.priceSource === "live" ? "Cotización en vivo" : "Precio local"}
                         </span>
-                        {asset.priceSource === "live" && asset.quoteUpdatedAt ? (
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Actualizado {formatQuoteUpdatedAt(asset.quoteUpdatedAt)}
-                          </span>
-                        ) : null}
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {getQuoteCheckedLabel(asset)}
+                        </span>
                       </div>
                       <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:px-3 sm:py-1 sm:text-xs">
                         {assetTypes.find((item) => item.value === asset.type)?.label}

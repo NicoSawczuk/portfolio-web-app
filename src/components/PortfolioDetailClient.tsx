@@ -32,32 +32,87 @@ const assetTypeLabels: Record<Asset["type"], string> = {
 };
 
 const assetPalette = ["#0ea5e9", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#6366f1", "#ec4899", "#14b8a6"];
+const ALMOST_CLOSED_QTY_THRESHOLD = 0.0001;
+const ALMOST_CLOSED_USD_THRESHOLD = 1;
+const ALMOST_CLOSED_PERCENT_THRESHOLD = 1;
+const CLOSED_FILTER_STORAGE_PREFIX = "portfolio:closed-filter";
 
 function getAssetColor(assetId: string, index: number) {
   const base = Array.from(assetId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return assetPalette[(base + index) % assetPalette.length];
 }
 
-function emptyTransactionForm() {
+function getTodayDateInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function emptyTransactionForm(initialDate = getTodayDateInputValue()) {
   return {
     type: "buy" as TransactionType,
     assetId: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: initialDate,
     quantity: "1",
     price: "",
     notes: "",
   };
 }
 
+function isValidDateInputValue(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 const transactionTypes: Array<{ value: TransactionType; label: string }> = [
   { value: "buy", label: "Compra" },
   { value: "sell", label: "Venta" },
-  { value: "cash_in", label: "Ingreso de efectivo" },
-  { value: "cash_out", label: "Egreso de efectivo" },
+  { value: "cash_in", label: "Ingreso" },
+  { value: "cash_out", label: "Egreso" },
 ];
 
 function getTransactionTypeLabel(type: TransactionType) {
   return transactionTypes.find((item) => item.value === type)?.label ?? type;
+}
+
+function isAssetTransactionType(type: TransactionType) {
+  return type === "buy" || type === "sell";
+}
+
+function getLatestTransactionDate(portfolio: Portfolio | null) {
+  if (!portfolio?.transactions?.length) {
+    return null;
+  }
+
+  const dates = portfolio.transactions
+    .map((transaction) => transaction.date)
+    .filter((date): date is string => Boolean(date && isValidDateInputValue(date)));
+
+  if (!dates.length) {
+    return null;
+  }
+
+  return dates.sort((a, b) => b.localeCompare(a))[0];
+}
+
+function filterAssetsByQuery(assets: Asset[], query: string) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) {
+    return assets;
+  }
+
+  return assets.filter((asset) => {
+    return (
+      normalizeSearchText(asset.symbol).includes(normalizedQuery) ||
+      normalizeSearchText(asset.name).includes(normalizedQuery) ||
+      normalizeSearchText(asset.type).includes(normalizedQuery)
+    );
+  });
 }
 
 interface PortfolioDetailClientProps {
@@ -66,7 +121,41 @@ interface PortfolioDetailClientProps {
   initialAssets: Asset[];
 }
 
+function parsePositiveNumber(value: string | null, fallback: number) {
+  const normalized = value?.trim().replace(",", ".") ?? "";
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return parsed;
+}
+
+function parsePositiveNumberFromInput(value: string, current: number) {
+  const normalized = value.trim().replace(",", ".");
+  if (!normalized) {
+    return current;
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return current;
+  }
+
+  return parsed;
+}
+
+function formatThresholdInput(value: number) {
+  return Number.isFinite(value) ? String(value) : "";
+}
+
 export default function PortfolioDetailClient({ portfolioId, initialPortfolio, initialAssets }: PortfolioDetailClientProps) {
+  const lastTransactionDateStorageKey = `portfolio:${portfolioId}:last-transaction-date`;
+  const lastTransactionAssetStorageKey = `portfolio:${portfolioId}:last-transaction-asset-id`;
+  const closedModeStorageKey = `${CLOSED_FILTER_STORAGE_PREFIX}:${portfolioId}:mode`;
+  const closedPercentStorageKey = `${CLOSED_FILTER_STORAGE_PREFIX}:${portfolioId}:percent`;
+  const closedQtyStorageKey = `${CLOSED_FILTER_STORAGE_PREFIX}:${portfolioId}:qty`;
+  const closedUsdStorageKey = `${CLOSED_FILTER_STORAGE_PREFIX}:${portfolioId}:usd`;
   const [portfolio, setPortfolio] = useState<Portfolio | null>(initialPortfolio);
   const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const [saving, setSaving] = useState(false);
@@ -74,32 +163,124 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [transactionForm, setTransactionForm] = useState(emptyTransactionForm());
+  const [assetSelectorQuery, setAssetSelectorQuery] = useState("");
   const [transactionSearchQuery, setTransactionSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "symbol" | "price" | "quantity">("date");
   const [transactionsPerPage, setTransactionsPerPage] = useState<10 | 20 | 50 | 100>(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [showAmounts, setShowAmounts] = useState(true);
-  const [performanceView, setPerformanceView] = useState<"chart" | "composition">("chart");
+  const [performanceView, setPerformanceView] = useState<"chart" | "composition" | "closed">("composition");
   const [compositionView, setCompositionView] = useState<"valuation" | "type">("valuation");
+  const [closedView, setClosedView] = useState<"closed" | "almost">("closed");
+  const [almostClosedMode, setAlmostClosedMode] = useState<"percent" | "absolute">(() => {
+    if (typeof window === "undefined") {
+      return "percent";
+    }
+
+    return window.localStorage.getItem(closedModeStorageKey) === "absolute" ? "absolute" : "percent";
+  });
+  const [almostClosedPercentThreshold, setAlmostClosedPercentThreshold] = useState<number>(() => {
+    if (typeof window === "undefined") {
+      return ALMOST_CLOSED_PERCENT_THRESHOLD;
+    }
+
+    return parsePositiveNumber(window.localStorage.getItem(closedPercentStorageKey), ALMOST_CLOSED_PERCENT_THRESHOLD);
+  });
+  const [almostClosedQtyThreshold, setAlmostClosedQtyThreshold] = useState<number>(() => {
+    if (typeof window === "undefined") {
+      return ALMOST_CLOSED_QTY_THRESHOLD;
+    }
+
+    return parsePositiveNumber(window.localStorage.getItem(closedQtyStorageKey), ALMOST_CLOSED_QTY_THRESHOLD);
+  });
+  const [almostClosedUsdThreshold, setAlmostClosedUsdThreshold] = useState<number>(() => {
+    if (typeof window === "undefined") {
+      return ALMOST_CLOSED_USD_THRESHOLD;
+    }
+
+    return parsePositiveNumber(window.localStorage.getItem(closedUsdStorageKey), ALMOST_CLOSED_USD_THRESHOLD);
+  });
+  const [almostClosedPercentInput, setAlmostClosedPercentInput] = useState(
+    formatThresholdInput(almostClosedPercentThreshold)
+  );
+  const [almostClosedQtyInput, setAlmostClosedQtyInput] = useState(
+    formatThresholdInput(almostClosedQtyThreshold)
+  );
+  const [almostClosedUsdInput, setAlmostClosedUsdInput] = useState(
+    formatThresholdInput(almostClosedUsdThreshold)
+  );
   const [hoveredChartPoint, setHoveredChartPoint] = useState<{ label: string; value: number; index: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(closedModeStorageKey, almostClosedMode);
+  }, [almostClosedMode, closedModeStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(closedPercentStorageKey, String(almostClosedPercentThreshold));
+  }, [almostClosedPercentThreshold, closedPercentStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(closedQtyStorageKey, String(almostClosedQtyThreshold));
+  }, [almostClosedQtyThreshold, closedQtyStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(closedUsdStorageKey, String(almostClosedUsdThreshold));
+  }, [almostClosedUsdThreshold, closedUsdStorageKey]);
+
+  const sortedAssets = useMemo(() => {
+    return [...assets].sort((a, b) => {
+      const bySymbol = a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
+      if (bySymbol !== 0) {
+        return bySymbol;
+      }
+
+      return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+    });
+  }, [assets]);
+
+  const selectableAssets = useMemo(() => {
+    return filterAssetsByQuery(sortedAssets, assetSelectorQuery);
+  }, [assetSelectorQuery, sortedAssets]);
 
   const transactionRows = useMemo(() => {
     if (!portfolio) return [];
 
-    return (portfolio.transactions ?? []).map((transaction) => ({
-      ...transaction,
-      assetId: transaction.assetId ?? "",
-      assetName: transaction.assetName ?? "Efectivo",
-      assetSymbol: transaction.assetSymbol ?? "",
-      assetType: transaction.assetType ?? "cash",
-      assetPrice: 0,
-    }));
+    return (portfolio.transactions ?? []).map((transaction) => {
+      const isAssetTransaction = isAssetTransactionType(transaction.type);
+
+      return {
+        ...transaction,
+        assetId: transaction.assetId ?? "",
+        assetName: transaction.assetName?.trim() || "Efectivo",
+        assetSymbol: transaction.assetSymbol?.trim() || (isAssetTransaction ? "" : "Efectivo"),
+        assetType: transaction.assetType || (isAssetTransaction ? "other" : "cash"),
+        assetPrice: 0,
+      };
+    });
   }, [portfolio]);
 
   const portfolioPerformance = useMemo(() => {
     if (!portfolio) {
       return null;
     }
+
+    const managesCash = Boolean(portfolio.managesCash);
 
     const holdings = new Map<
       string,
@@ -111,6 +292,11 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
         quantity: number;
         totalCost: number;
         avgBuyPrice: number;
+        totalBoughtQty: number;
+        totalBoughtAmount: number;
+        totalSoldAmount: number;
+        realizedCost: number;
+        realizedPnl: number;
       }
     >();
 
@@ -127,13 +313,21 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
         quantity: 0,
         totalCost: 0,
         avgBuyPrice: 0,
+        totalBoughtQty: 0,
+        totalBoughtAmount: 0,
+        totalSoldAmount: 0,
+        realizedCost: 0,
+        realizedPnl: 0,
       };
 
       if (transaction.type === "buy") {
         const quantity = Number(transaction.quantity ?? 0);
         if (quantity > 0) {
+          const transactionAmount = quantity * Number(transaction.price ?? 0);
           existing.quantity += quantity;
-          existing.totalCost += quantity * Number(transaction.price ?? 0);
+          existing.totalCost += transactionAmount;
+          existing.totalBoughtQty += quantity;
+          existing.totalBoughtAmount += transactionAmount;
           existing.avgBuyPrice = existing.quantity ? existing.totalCost / existing.quantity : 0;
         }
       }
@@ -141,9 +335,14 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
       if (transaction.type === "sell") {
         const quantity = Number(transaction.quantity ?? 0);
         if (quantity > 0) {
+          const price = Number(transaction.price ?? 0);
           const costToRemove = Math.min(existing.quantity, quantity) * existing.avgBuyPrice;
+          const proceeds = quantity * price;
           existing.quantity = Math.max(0, existing.quantity - quantity);
           existing.totalCost = Math.max(0, existing.totalCost - costToRemove);
+          existing.totalSoldAmount += proceeds;
+          existing.realizedCost += costToRemove;
+          existing.realizedPnl += proceeds - costToRemove;
           existing.avgBuyPrice = existing.quantity ? existing.totalCost / existing.quantity : 0;
         }
       }
@@ -162,7 +361,44 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     };
 
     const sortedTransactions = [...(portfolio.transactions ?? [])].sort((a, b) => a.date.localeCompare(b.date));
-    sortedTransactions.forEach(applyTransaction);
+    let cashBalance = 0;
+    let cashNetContributions = 0;
+
+    const getCashMovement = (transaction: Transaction) => {
+      const amount = Number(transaction.price ?? 0);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return { balanceDelta: 0, contributionDelta: 0 };
+      }
+
+      if (transaction.type === "cash_in") {
+        return { balanceDelta: amount, contributionDelta: amount };
+      }
+
+      if (transaction.type === "cash_out") {
+        return { balanceDelta: -amount, contributionDelta: -amount };
+      }
+
+      if (transaction.type === "buy" || transaction.type === "sell") {
+        const quantity = Number(transaction.quantity ?? 0);
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+          return { balanceDelta: 0, contributionDelta: 0 };
+        }
+
+        const tradeAmount = quantity * amount;
+        return { balanceDelta: transaction.type === "buy" ? -tradeAmount : tradeAmount, contributionDelta: 0 };
+      }
+
+      return { balanceDelta: 0, contributionDelta: 0 };
+    };
+
+    sortedTransactions.forEach((transaction) => {
+      applyTransaction(transaction);
+      if (managesCash) {
+        const movement = getCashMovement(transaction);
+        cashBalance += movement.balanceDelta;
+        cashNetContributions += movement.contributionDelta;
+      }
+    });
 
     const holdingsList = Array.from(holdings.values())
       .filter((item) => item.quantity > 0)
@@ -183,12 +419,166 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
           pnlPct,
         };
       })
-      .sort((a, b) => b.marketValue - a.marketValue);
+      .sort((a, b) => {
+        const byMarketValue = b.marketValue - a.marketValue;
+        if (byMarketValue !== 0) {
+          return byMarketValue;
+        }
+
+        return a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
+      });
+
+    if (managesCash) {
+      const normalizedCashBalance = Math.abs(cashBalance) < 1e-8 ? 0 : cashBalance;
+      holdingsList.unshift({
+        assetId: `cash:${portfolio.id}`,
+        symbol: "USD",
+        name: "Efectivo",
+        type: "cash",
+        quantity: normalizedCashBalance,
+        totalCost: normalizedCashBalance,
+        avgBuyPrice: 1,
+        currentPrice: 1,
+        marketValue: normalizedCashBalance,
+        costBasis: normalizedCashBalance,
+        pnl: 0,
+        pnlPct: 0,
+        totalBoughtQty: 0,
+        totalBoughtAmount: 0,
+        totalSoldAmount: 0,
+        realizedCost: 0,
+        realizedPnl: 0,
+      });
+    }
 
     const totalMarketValue = holdingsList.reduce((sum, item) => sum + item.marketValue, 0);
-    const totalCostBasis = holdingsList.reduce((sum, item) => sum + item.costBasis, 0);
+    const totalCostBasis = managesCash
+      ? cashNetContributions
+      : holdingsList.reduce((sum, item) => sum + item.costBasis, 0);
     const totalPnl = totalMarketValue - totalCostBasis;
     const totalPnlPct = totalCostBasis > 0 ? totalPnl / totalCostBasis : 0;
+
+    const closedPositions = Array.from(holdings.values())
+      .filter((item) => item.quantity === 0 && (item.totalBoughtAmount > 0 || item.totalSoldAmount > 0))
+      .map((item) => {
+        const assetMeta = assets.find((asset) => asset.id === item.assetId);
+        const symbol = item.symbol || assetMeta?.symbol || "";
+        const name = item.name || assetMeta?.name || "Activo";
+        const type = item.type || assetMeta?.type || "other";
+        const realizedPnlPct = item.realizedCost > 0 ? item.realizedPnl / item.realizedCost : 0;
+
+        return {
+          assetId: item.assetId,
+          symbol,
+          name,
+          type,
+          totalBoughtAmount: item.totalBoughtAmount,
+          totalSoldAmount: item.totalSoldAmount,
+          realizedCost: item.realizedCost,
+          realizedPnl: item.realizedPnl,
+          realizedPnlPct,
+        };
+      })
+      .sort((a, b) => {
+        const byRealizedPnl = b.realizedPnl - a.realizedPnl;
+        if (byRealizedPnl !== 0) {
+          return byRealizedPnl;
+        }
+
+        return a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
+      });
+
+    const closedPositionsSummary = closedPositions.reduce(
+      (acc, item) => {
+        acc.realizedPnl += item.realizedPnl;
+        acc.totalBoughtAmount += item.totalBoughtAmount;
+        acc.totalSoldAmount += item.totalSoldAmount;
+        acc.realizedCost += item.realizedCost;
+        return acc;
+      },
+      { realizedPnl: 0, totalBoughtAmount: 0, totalSoldAmount: 0, realizedCost: 0 }
+    );
+
+    const closedPositionsPnlPct =
+      closedPositionsSummary.realizedCost > 0
+        ? closedPositionsSummary.realizedPnl / closedPositionsSummary.realizedCost
+        : 0;
+
+    const almostClosedPositions = Array.from(holdings.values())
+      .map((item) => {
+        const assetMeta = assets.find((asset) => asset.id === item.assetId);
+        const currentPrice = assetMeta?.price ?? 0;
+        const remainingMarketValue = item.quantity * currentPrice;
+        const remainingQtyPct = item.totalBoughtQty > 0 ? item.quantity / item.totalBoughtQty : Number.POSITIVE_INFINITY;
+        const remainingCost = item.totalCost;
+        const remainingPnl = remainingMarketValue - remainingCost;
+        const estimatedTotalPnl = item.realizedPnl + remainingPnl;
+        const symbol = item.symbol || assetMeta?.symbol || "";
+        const name = item.name || assetMeta?.name || "Activo";
+        const type = item.type || assetMeta?.type || "other";
+
+        return {
+          assetId: item.assetId,
+          symbol,
+          name,
+          type,
+          quantity: item.quantity,
+          currentPrice,
+          remainingMarketValue,
+          remainingQtyPct,
+          remainingCost,
+          remainingPnl,
+          realizedPnl: item.realizedPnl,
+          realizedCost: item.realizedCost,
+          realizedPnlPct: item.realizedCost > 0 ? item.realizedPnl / item.realizedCost : 0,
+          estimatedTotalPnl,
+          totalBoughtAmount: item.totalBoughtAmount,
+          totalSoldAmount: item.totalSoldAmount,
+        };
+      })
+      .filter((item) => {
+        if (item.quantity <= 0) {
+          return false;
+        }
+
+        if (item.totalSoldAmount <= 0) {
+          return false;
+        }
+
+        if (almostClosedMode === "percent") {
+          return item.remainingQtyPct <= almostClosedPercentThreshold / 100;
+        }
+
+        return item.quantity <= almostClosedQtyThreshold || item.remainingMarketValue <= almostClosedUsdThreshold;
+      })
+      .sort((a, b) => {
+        const byEstimatedPnl = b.estimatedTotalPnl - a.estimatedTotalPnl;
+        if (byEstimatedPnl !== 0) {
+          return byEstimatedPnl;
+        }
+
+        return a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
+      });
+
+    const almostClosedPositionsSummary = almostClosedPositions.reduce(
+      (acc, item) => {
+        acc.realizedPnl += item.realizedPnl;
+        acc.remainingPnl += item.remainingPnl;
+        acc.estimatedTotalPnl += item.estimatedTotalPnl;
+        acc.totalBoughtAmount += item.totalBoughtAmount;
+        acc.totalSoldAmount += item.totalSoldAmount;
+        acc.remainingMarketValue += item.remainingMarketValue;
+        return acc;
+      },
+      {
+        realizedPnl: 0,
+        remainingPnl: 0,
+        estimatedTotalPnl: 0,
+        totalBoughtAmount: 0,
+        totalSoldAmount: 0,
+        remainingMarketValue: 0,
+      }
+    );
 
     const assetTypeBreakdown = holdingsList.reduce<Record<string, { type: Asset["type"]; marketValue: number }>>((acc, item) => {
       const bucket = acc[item.type] ?? { type: item.type, marketValue: 0 };
@@ -211,6 +601,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
 
     const dates = Object.keys(transactionsByDate).sort();
     const chartHoldings = new Map<string, { assetId: string; quantity: number; totalCost: number; avgBuyPrice: number }>();
+    let chartCashBalance = 0;
 
     const applyChartTransaction = (transaction: Transaction) => {
       if (!transaction.assetId) {
@@ -247,11 +638,17 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     };
 
     dates.forEach((date) => {
-      transactionsByDate[date]?.forEach(applyChartTransaction);
+      transactionsByDate[date]?.forEach((transaction) => {
+        applyChartTransaction(transaction);
+        if (managesCash) {
+          const movement = getCashMovement(transaction);
+          chartCashBalance += movement.balanceDelta;
+        }
+      });
       const value = Array.from(chartHoldings.values()).reduce((sum, item) => {
         const assetMeta = assets.find((asset) => asset.id === item.assetId);
         return sum + item.quantity * (assetMeta?.price ?? 0);
-      }, 0);
+      }, managesCash ? chartCashBalance : 0);
       chartPoints.push({ label: date, value });
     });
 
@@ -265,8 +662,22 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
       totalPnlPct,
       assetTypeBreakdown: Object.values(assetTypeBreakdown).sort((a, b) => b.marketValue - a.marketValue),
       chartPoints,
+      closedPositions,
+      closedPositionsSummary: {
+        ...closedPositionsSummary,
+        realizedPnlPct: closedPositionsPnlPct,
+      },
+      almostClosedPositions,
+      almostClosedPositionsSummary,
     };
-  }, [assets, portfolio]);
+  }, [
+    almostClosedMode,
+    almostClosedPercentThreshold,
+    almostClosedQtyThreshold,
+    almostClosedUsdThreshold,
+    assets,
+    portfolio,
+  ]);
 
   const sortedTransactions = useMemo(() => {
     const rows = [...transactionRows];
@@ -322,15 +733,65 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
   const formatCurrencyByVisibility = (value: number) => (showAmounts ? formatCurrency(value) : "••••••");
   const formatPercentByVisibility = (value: number) => (showAmounts ? formatPercent(value) : "••••");
 
+  const getTransactionAmount = (transaction: Transaction) => {
+    if (!isAssetTransactionType(transaction.type)) {
+      const amount = Number(transaction.price ?? 0);
+      return Number.isFinite(amount) ? amount : null;
+    }
+
+    const quantity = Number(transaction.quantity);
+    if (!Number.isFinite(quantity)) {
+      return null;
+    }
+
+    return Number(transaction.price ?? 0) * quantity;
+  };
+
+  const getDefaultTransactionDate = () => {
+    const latestPortfolioDate = getLatestTransactionDate(portfolio) ?? getTodayDateInputValue();
+
+    if (typeof window === "undefined") {
+      return latestPortfolioDate;
+    }
+
+    const storedDate = window.localStorage.getItem(lastTransactionDateStorageKey);
+    if (storedDate && isValidDateInputValue(storedDate)) {
+      return storedDate;
+    }
+
+    return latestPortfolioDate;
+  };
+
+  const getDefaultTransactionAssetId = () => {
+    if (typeof window !== "undefined") {
+      const storedAssetId = window.localStorage.getItem(lastTransactionAssetStorageKey);
+      if (storedAssetId && sortedAssets.some((asset) => asset.id === storedAssetId)) {
+        return storedAssetId;
+      }
+    }
+
+    const latestAssetTransaction =
+      [...(portfolio?.transactions ?? [])]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .find((transaction) => transaction.assetId && sortedAssets.some((asset) => asset.id === transaction.assetId)) ?? null;
+
+    return latestAssetTransaction?.assetId ?? "";
+  };
+
   const openCreateTransactionModal = () => {
     setEditingTransaction(null);
-    setTransactionForm(emptyTransactionForm());
+    setAssetSelectorQuery("");
+    setTransactionForm({
+      ...emptyTransactionForm(getDefaultTransactionDate()),
+      assetId: getDefaultTransactionAssetId(),
+    });
     setError(null);
     setIsTransactionModalOpen(true);
   };
 
   const openEditTransactionModal = (transaction: Transaction & { assetId: string; assetName: string; assetSymbol: string; assetType: Asset["type"]; assetPrice: number }) => {
     setEditingTransaction(transaction);
+    setAssetSelectorQuery("");
     setTransactionForm({
       type: transaction.type,
       assetId: transaction.assetId ?? "",
@@ -346,6 +807,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
   const closeTransactionModal = () => {
     setIsTransactionModalOpen(false);
     setEditingTransaction(null);
+    setAssetSelectorQuery("");
     setTransactionForm(emptyTransactionForm());
     setError(null);
   };
@@ -354,7 +816,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     const assetId = transactionForm.assetId;
     const quantity = Number(transactionForm.quantity);
     const price = Number(transactionForm.price);
-    const isAssetTransaction = transactionForm.type === "buy" || transactionForm.type === "sell";
+    const isAssetTransaction = isAssetTransactionType(transactionForm.type);
 
     if (isAssetTransaction) {
       if (!assetId || !transactionForm.date || !quantity || !price) {
@@ -378,9 +840,9 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
           transactionId: editingTransaction?.id,
           type: transactionForm.type,
           assetId: isAssetTransaction ? assetId : undefined,
-          assetSymbol: isAssetTransaction ? assets.find((asset) => asset.id === assetId)?.symbol || "" : "",
-          assetName: isAssetTransaction ? assets.find((asset) => asset.id === assetId)?.name || "" : "",
-          assetType: isAssetTransaction ? assets.find((asset) => asset.id === assetId)?.type || "stock" : undefined,
+          assetSymbol: isAssetTransaction ? assets.find((asset) => asset.id === assetId)?.symbol || "" : "Efectivo",
+          assetName: isAssetTransaction ? assets.find((asset) => asset.id === assetId)?.name || "" : "Efectivo",
+          assetType: isAssetTransaction ? assets.find((asset) => asset.id === assetId)?.type || "stock" : "cash",
           quantity: isAssetTransaction ? quantity : undefined,
           price,
           date: transactionForm.date,
@@ -395,6 +857,12 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
 
       const updatedPortfolio = (await response.json()) as Portfolio;
       setPortfolio(updatedPortfolio);
+      if (typeof window !== "undefined" && isValidDateInputValue(transactionForm.date)) {
+        window.localStorage.setItem(lastTransactionDateStorageKey, transactionForm.date);
+        if (isAssetTransaction && assetId) {
+          window.localStorage.setItem(lastTransactionAssetStorageKey, assetId);
+        }
+      }
       closeTransactionModal();
     } catch (err) {
       setError(String(err));
@@ -474,17 +942,24 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 <div className="inline-flex rounded-full bg-slate-200 p-1 dark:bg-slate-800">
                   <button
                     type="button"
-                    onClick={() => setPerformanceView("chart")}
-                    className={`rounded-full px-3 py-1.5 text-sm font-medium ${performanceView === "chart" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
-                  >
-                    Gráfico
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setPerformanceView("composition")}
                     className={`rounded-full px-3 py-1.5 text-sm font-medium ${performanceView === "composition" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
                   >
                     Composición
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPerformanceView("closed")}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium ${performanceView === "closed" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                  >
+                    Cerradas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPerformanceView("chart")}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium ${performanceView === "chart" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                  >
+                    Gráfico
                   </button>
                 </div>
               </div>
@@ -552,6 +1027,204 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         <span className="text-slate-600 dark:text-slate-300">Valor: {formatCurrencyByVisibility(hoveredChartPoint.value)}</span>
                       </div>
                     ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : performanceView === "closed" ? (
+              <div className="mt-6">
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">Posiciones cerradas</h3>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {closedView === "closed"
+                          ? "Activos totalmente vendidos con resultado realizado."
+                          : "Activos con remanente mínimo para analizar como casi cerrados."}
+                      </p>
+                    </div>
+                    <div className="inline-flex rounded-full bg-slate-200 p-1 dark:bg-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setClosedView("closed")}
+                        className={`rounded-full px-3 py-1.5 text-sm font-medium ${closedView === "closed" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                      >
+                        Cerradas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setClosedView("almost")}
+                        className={`rounded-full px-3 py-1.5 text-sm font-medium ${closedView === "almost" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                      >
+                        Casi cerradas
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 min-h-[20px] text-sm text-slate-600 dark:text-slate-300">
+                    {closedView === "closed" && portfolioPerformance.closedPositions.length ? (
+                      <>
+                        Resultado: {portfolioPerformance.closedPositionsSummary.realizedPnl >= 0 ? "+" : ""}
+                        {formatCurrencyByVisibility(portfolioPerformance.closedPositionsSummary.realizedPnl)}
+                        {" "}
+                        ({formatPercentByVisibility(portfolioPerformance.closedPositionsSummary.realizedPnlPct)})
+                      </>
+                    ) : null}
+                    {closedView === "almost" && portfolioPerformance.almostClosedPositions.length ? (
+                      <>
+                        Estimado total: {portfolioPerformance.almostClosedPositionsSummary.estimatedTotalPnl >= 0 ? "+" : ""}
+                        {formatCurrencyByVisibility(portfolioPerformance.almostClosedPositionsSummary.estimatedTotalPnl)}
+                      </>
+                    ) : null}
+                  </div>
+
+                  {closedView === "almost" ? (
+                    <div className="mt-3 rounded-2xl border border-slate-200/70 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="inline-flex rounded-full bg-slate-200 p-1 dark:bg-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setAlmostClosedMode("percent")}
+                            className={`rounded-full px-3 py-1.5 text-sm font-medium ${almostClosedMode === "percent" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                          >
+                            Por porcentaje
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAlmostClosedMode("absolute")}
+                            className={`rounded-full px-3 py-1.5 text-sm font-medium ${almostClosedMode === "absolute" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                          >
+                            Por umbral
+                          </button>
+                        </div>
+                      </div>
+
+                      {almostClosedMode === "percent" ? (
+                        <label className="mt-3 block text-sm text-slate-600 dark:text-slate-300">
+                          Remanente máximo (% cantidad)
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={almostClosedPercentInput}
+                            onChange={(event) => setAlmostClosedPercentInput(event.target.value)}
+                            onBlur={() => {
+                              const next = parsePositiveNumberFromInput(
+                                almostClosedPercentInput,
+                                almostClosedPercentThreshold
+                              );
+                              setAlmostClosedPercentThreshold(next);
+                              setAlmostClosedPercentInput(formatThresholdInput(next));
+                            }}
+                            className="mt-1 w-40 rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                          />
+                        </label>
+                      ) : (
+                        <div className="mt-3 flex flex-wrap gap-3">
+                          <label className="text-sm text-slate-600 dark:text-slate-300">
+                            Cantidad máxima
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={almostClosedQtyInput}
+                              onChange={(event) => setAlmostClosedQtyInput(event.target.value)}
+                              onBlur={() => {
+                                const next = parsePositiveNumberFromInput(almostClosedQtyInput, almostClosedQtyThreshold);
+                                setAlmostClosedQtyThreshold(next);
+                                setAlmostClosedQtyInput(formatThresholdInput(next));
+                              }}
+                              className="mt-1 w-36 rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                            />
+                          </label>
+                          <label className="text-sm text-slate-600 dark:text-slate-300">
+                            Valor máximo (USD)
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={almostClosedUsdInput}
+                              onChange={(event) => setAlmostClosedUsdInput(event.target.value)}
+                              onBlur={() => {
+                                const next = parsePositiveNumberFromInput(almostClosedUsdInput, almostClosedUsdThreshold);
+                                setAlmostClosedUsdThreshold(next);
+                                setAlmostClosedUsdInput(formatThresholdInput(next));
+                              }}
+                              className="mt-1 w-36 rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 space-y-3 overflow-y-auto pr-1 max-h-[340px] sm:max-h-[420px] xl:max-h-[520px]">
+                    {closedView === "closed" && portfolioPerformance.closedPositions.length ? (
+                      portfolioPerformance.closedPositions.map((position, index) => {
+                        const color = getAssetColor(position.assetId, index);
+
+                        return (
+                          <div key={position.assetId} className="rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <span className="inline-flex h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
+                                <div>
+                                  <p className="font-semibold text-slate-800 dark:text-slate-100">{position.name}</p>
+                                  <p className="text-xs text-slate-500">{position.symbol} · {assetTypeLabels[position.type]}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className={`font-semibold ${position.realizedPnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                  {position.realizedPnl >= 0 ? "+" : ""}
+                                  {formatCurrencyByVisibility(position.realizedPnl)}
+                                </p>
+                                <p className="text-xs text-slate-500">{formatPercentByVisibility(position.realizedPnlPct)}</p>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                              <span>Comprado: {formatCurrencyByVisibility(position.totalBoughtAmount)}</span>
+                              <span>Vendido: {formatCurrencyByVisibility(position.totalSoldAmount)}</span>
+                              <span>Base realizada: {formatCurrencyByVisibility(position.realizedCost)}</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : closedView === "almost" && portfolioPerformance.almostClosedPositions.length ? (
+                      portfolioPerformance.almostClosedPositions.map((position, index) => {
+                        const color = getAssetColor(position.assetId, index);
+
+                        return (
+                          <div key={position.assetId} className="rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <span className="inline-flex h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
+                                <div>
+                                  <p className="font-semibold text-slate-800 dark:text-slate-100">{position.name}</p>
+                                  <p className="text-xs text-slate-500">{position.symbol} · {assetTypeLabels[position.type]}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className={`font-semibold ${position.estimatedTotalPnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                  {position.estimatedTotalPnl >= 0 ? "+" : ""}
+                                  {formatCurrencyByVisibility(position.estimatedTotalPnl)}
+                                </p>
+                                <p className="text-xs text-slate-500">Cantidad remanente: {position.quantity}</p>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                              <span>Realizado: {position.realizedPnl >= 0 ? "+" : ""}{formatCurrencyByVisibility(position.realizedPnl)}</span>
+                              <span>Remanente: {formatCurrencyByVisibility(position.remainingMarketValue)}</span>
+                              <span>% remanente: {(position.remainingQtyPct * 100).toFixed(2)}%</span>
+                              <span>PnL remanente: {position.remainingPnl >= 0 ? "+" : ""}{formatCurrencyByVisibility(position.remainingPnl)}</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                        {closedView === "closed"
+                          ? "No hay posiciones cerradas para mostrar."
+                          : "No hay posiciones casi cerradas para mostrar."}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -692,19 +1365,20 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
             </div>
           ) : (
             <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200/70 dark:border-slate-800 sm:mt-6">
-              <div className="grid min-w-[540px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.22fr] gap-1 bg-slate-50 px-1.5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-950/80 dark:text-slate-400 sm:min-w-[620px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-xs sm:tracking-[0.2em]">
+              <div className="grid min-w-[650px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.72fr_0.22fr] gap-1 bg-slate-50 px-1.5 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-950/80 dark:text-slate-400 sm:min-w-[760px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.85fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-xs sm:tracking-[0.2em]">
                 <div>Fecha</div>
                 <div>Tipo</div>
                 <div>Símbolo</div>
                 <div>Precio</div>
                 <div>Cantidad</div>
+                <div>Monto</div>
                 <div></div>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {paginatedTransactions.map((transaction) => (
-                  <div key={transaction.id} className="grid min-w-[540px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.22fr] gap-1 px-1.5 py-2 text-[11px] text-slate-700 dark:text-slate-200 sm:min-w-[620px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-sm">
+                  <div key={transaction.id} className="grid min-w-[650px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.72fr_0.22fr] gap-1 px-1.5 py-2 text-center text-[11px] text-slate-700 dark:text-slate-200 sm:min-w-[760px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.85fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-sm">
                     <div>{transaction.date}</div>
-                    <div>
+                    <div className="flex justify-center">
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:px-2.5 sm:py-1 sm:text-xs">
                         {getTransactionTypeLabel(transaction.type)}
                       </span>
@@ -712,7 +1386,13 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                     <div>{transaction.assetSymbol || "—"}</div>
                     <div>{formatCurrency(transaction.price)}</div>
                     <div>{transaction.quantity ?? "—"}</div>
-                    <div className="flex justify-end gap-2">
+                    <div>
+                      {(() => {
+                        const amount = getTransactionAmount(transaction);
+                        return amount === null ? "—" : formatCurrency(amount);
+                      })()}
+                    </div>
+                    <div className="flex justify-center gap-2">
                       <button
                         type="button"
                         onClick={() => openEditTransactionModal(transaction)}
@@ -795,11 +1475,33 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
             </div>
 
             <div className="mt-6 space-y-4">
+              {(() => {
+                const isAssetTransaction = isAssetTransactionType(transactionForm.type);
+
+                return (
+                  <>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                 Tipo de transacción
                 <select
                   value={transactionForm.type}
-                  onChange={(event) => setTransactionForm((current) => ({ ...current, type: event.target.value as TransactionType }))}
+                  onChange={(event) => {
+                    const nextType = event.target.value as TransactionType;
+                    setTransactionForm((current) => {
+                      const nextForm = { ...current, type: nextType };
+
+                      if (!isAssetTransactionType(nextType)) {
+                        if (!nextForm.price && nextForm.quantity) {
+                          nextForm.price = nextForm.quantity;
+                        }
+                        nextForm.quantity = "1";
+                        nextForm.assetId = "";
+                      } else if (!nextForm.quantity) {
+                        nextForm.quantity = "1";
+                      }
+
+                      return nextForm;
+                    });
+                  }}
                   className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
                 >
                   {transactionTypes.map((item) => (
@@ -810,16 +1512,47 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 </select>
               </label>
 
-              {transactionForm.type === "buy" || transactionForm.type === "sell" ? (
+              {isAssetTransaction ? (
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                   Activo
+                  <input
+                    type="search"
+                    value={assetSelectorQuery}
+                    onChange={(event) => {
+                      const nextQuery = event.target.value;
+                      setAssetSelectorQuery(nextQuery);
+
+                      const nextMatches = filterAssetsByQuery(sortedAssets, nextQuery);
+                      if (!nextMatches.length) {
+                        setTransactionForm((current) => ({ ...current, assetId: "" }));
+                        return;
+                      }
+
+                      setTransactionForm((current) => {
+                        if (!nextQuery.trim()) {
+                          return current;
+                        }
+
+                        if (current.assetId === nextMatches[0].id) {
+                          return current;
+                        }
+
+                        return {
+                          ...current,
+                          assetId: nextMatches[0].id,
+                        };
+                      });
+                    }}
+                    placeholder="Buscar activo por símbolo o nombre"
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                  />
                   <select
                     value={transactionForm.assetId}
                     onChange={(event) => setTransactionForm((current) => ({ ...current, assetId: event.target.value }))}
                     className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
                   >
                     <option value="">Seleccioná un activo</option>
-                    {assets.map((asset) => (
+                    {selectableAssets.map((asset) => (
                       <option key={asset.id} value={asset.id}>
                         {asset.symbol} — {asset.name} — {formatCurrency(asset.price)}
                       </option>
@@ -828,7 +1561,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 </label>
               ) : null}
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className={`grid gap-4 ${isAssetTransaction ? "sm:grid-cols-2" : ""}`}>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                   Fecha
                   <input
@@ -838,36 +1571,62 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                     className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
                   />
                 </label>
+                {isAssetTransaction ? (
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Cantidad
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="any"
+                      value={transactionForm.quantity}
+                      onChange={(event) => setTransactionForm((current) => ({ ...current, quantity: event.target.value }))}
+                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                    />
+                  </label>
+                ) : (
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Monto
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="any"
+                      value={transactionForm.price}
+                      onChange={(event) => setTransactionForm((current) => ({ ...current, price: event.target.value }))}
+                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                    />
+                  </label>
+                )}
+              </div>
+
+              {isAssetTransaction ? (
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {transactionForm.type === "buy" || transactionForm.type === "sell" ? "Cantidad" : "Monto"}
+                  Precio
                   <input
                     type="number"
-                    value={transactionForm.quantity}
-                    onChange={(event) => setTransactionForm((current) => ({ ...current, quantity: event.target.value }))}
+                    inputMode="decimal"
+                    min="0"
+                    step="any"
+                    value={transactionForm.price}
+                    onChange={(event) => setTransactionForm((current) => ({ ...current, price: event.target.value }))}
                     className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
                   />
                 </label>
-              </div>
-
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                Precio
-                <input
-                  type="number"
-                  value={transactionForm.price}
-                  onChange={(event) => setTransactionForm((current) => ({ ...current, price: event.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
-                />
-              </label>
+              ) : null}
 
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                 Notas
                 <textarea
                   value={transactionForm.notes}
                   onChange={(event) => setTransactionForm((current) => ({ ...current, notes: event.target.value }))}
-                  className="mt-2 min-h-[110px] w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                  className="mt-2 min-h-[72px] w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
                   placeholder="Opcional"
                 />
               </label>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="mt-6 flex flex-wrap justify-end gap-3">
