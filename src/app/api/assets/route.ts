@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAssetId, readAssets, writeAssets } from "@/lib/asset-db";
+import { createAssetId, deleteAssetById, insertAsset, readAssets, updateAssetById, writeAssets } from "@/lib/asset-db";
 import { refreshAssetsQuotesWithCache } from "@/lib/finnhub-service";
 import type { Asset } from "@/lib/portfolio";
 
@@ -22,8 +22,12 @@ export async function GET(request: Request) {
   const forceRefresh = forceRefreshRaw === "1" || forceRefreshRaw === "true";
 
   const assets = await readAssets();
+  if (!forceRefresh) {
+    return NextResponse.json(assets);
+  }
+
   const { hydratedAssets, persistedAssets, hasPersistenceChanges } = await refreshAssetsQuotesWithCache(assets, {
-    forceRefresh,
+    forceRefresh: true,
   });
 
   if (hasPersistenceChanges) {
@@ -52,7 +56,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El ID partner debe ser un entero positivo." }, { status: 400 });
   }
 
-  const assets = await readAssets();
   const newAsset: Asset = {
     id: createAssetId(),
     symbol: symbol.trim().toUpperCase(),
@@ -63,8 +66,7 @@ export async function POST(request: Request) {
     transactions: [],
   };
 
-  assets.unshift(newAsset);
-  await writeAssets(assets);
+  await insertAsset(newAsset);
   return NextResponse.json(newAsset, { status: 201 });
 }
 
@@ -88,24 +90,19 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "El ID partner debe ser un entero positivo." }, { status: 400 });
   }
 
-  const assets = await readAssets();
-  const index = assets.findIndex((asset) => asset.id === id);
-
-  if (index === -1) {
-    return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
-  }
-
-  assets[index] = {
-    ...assets[index],
+  const updated = await updateAssetById(id, {
     symbol: symbol.trim().toUpperCase(),
     name: name.trim(),
     type,
     id_partner: normalizedPartnerId,
-    price: Number(price ?? assets[index].price),
-  };
+    price: Number(price ?? 0),
+  });
 
-  await writeAssets(assets);
-  return NextResponse.json(assets[index]);
+  if (!updated) {
+    return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
+  }
+
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(request: Request) {
@@ -115,13 +112,10 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "El ID es obligatorio." }, { status: 400 });
   }
 
-  const assets = await readAssets();
-  const next = assets.filter((asset) => asset.id !== id);
-
-  if (next.length === assets.length) {
+  const deleted = await deleteAssetById(id);
+  if (!deleted) {
     return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
   }
 
-  await writeAssets(next);
   return NextResponse.json({ success: true });
 }

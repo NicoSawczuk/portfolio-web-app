@@ -90,6 +90,7 @@ export function calculatePortfolioPerformance(
   }
 
   const holdings = new Map<string, PortfolioHoldingSummary>();
+  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
   const sortedTransactions = [...(portfolio.transactions ?? [])].sort((a, b) => a.date.localeCompare(b.date));
   const managesCash = Boolean(portfolio.managesCash);
   let cashBalance = 0;
@@ -134,7 +135,7 @@ export function calculatePortfolioPerformance(
   const holdingsList = Array.from(holdings.values())
     .filter((item) => item.quantity > 0)
     .map((item) => {
-      const assetMeta = assets.find((asset) => asset.id === item.assetId);
+      const assetMeta = assetById.get(item.assetId);
       const currentPrice = assetMeta?.price ?? 0;
       const marketValue = item.quantity * currentPrice;
       const costBasis = item.quantity * item.avgBuyPrice;
@@ -243,7 +244,7 @@ export function calculatePortfolioPerformance(
       }
     });
     const value = Array.from(chartHoldings.values()).reduce((sum, item) => {
-      const assetMeta = assets.find((asset) => asset.id === item.assetId);
+      const assetMeta = assetById.get(item.assetId);
       return sum + item.quantity * (assetMeta?.price ?? 0);
     }, managesCash ? chartCashBalance : 0);
     chartPoints.push({ label: date, value });

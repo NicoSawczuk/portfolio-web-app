@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { readPortfolios, writePortfolios, createPortfolioId } from "@/lib/portfolio-db";
+import {
+  createPortfolioId,
+  deletePortfolioById,
+  insertPortfolio,
+  readPortfolios,
+  updatePortfolioFields,
+} from "@/lib/portfolio-db";
 import type { Portfolio } from "@/lib/portfolio";
 
 export async function GET() {
@@ -19,7 +25,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El nombre es obligatorio." }, { status: 400 });
   }
 
-  const portfolios = await readPortfolios();
   const newPortfolio: Portfolio = {
     id: createPortfolioId(),
     name: name.trim(),
@@ -30,8 +35,7 @@ export async function POST(request: Request) {
     transactions: [],
   };
 
-  portfolios.unshift(newPortfolio);
-  await writePortfolios(portfolios);
+  await insertPortfolio(newPortfolio);
   return NextResponse.json(newPortfolio, { status: 201 });
 }
 
@@ -52,22 +56,17 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "El nombre es obligatorio." }, { status: 400 });
   }
 
-  const portfolios = await readPortfolios();
-  const index = portfolios.findIndex((portfolio) => portfolio.id === id);
-
-  if (index === -1) {
-    return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
-  }
-
-  portfolios[index] = {
-    ...portfolios[index],
+  const updated = await updatePortfolioFields(id, {
     name: name.trim(),
     description: description?.trim() ?? "",
     managesCash: Boolean(managesCash),
-  };
+  });
 
-  await writePortfolios(portfolios);
-  return NextResponse.json(portfolios[index]);
+  if (!updated) {
+    return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+  }
+
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(request: Request) {
@@ -77,13 +76,10 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "El ID es obligatorio." }, { status: 400 });
   }
 
-  const portfolios = await readPortfolios();
-  const next = portfolios.filter((portfolio) => portfolio.id !== id);
-
-  if (next.length === portfolios.length) {
+  const deleted = await deletePortfolioById(id);
+  if (!deleted) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }
 
-  await writePortfolios(next);
   return NextResponse.json({ success: true });
 }

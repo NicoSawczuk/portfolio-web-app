@@ -157,7 +157,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
   const closedQtyStorageKey = `${CLOSED_FILTER_STORAGE_PREFIX}:${portfolioId}:qty`;
   const closedUsdStorageKey = `${CLOSED_FILTER_STORAGE_PREFIX}:${portfolioId}:usd`;
   const [portfolio, setPortfolio] = useState<Portfolio | null>(initialPortfolio);
-  const [assets, setAssets] = useState<Asset[]>(initialAssets);
+  const assets = initialAssets;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
@@ -281,6 +281,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     }
 
     const managesCash = Boolean(portfolio.managesCash);
+    const assetById = new Map(assets.map((asset) => [asset.id, asset]));
 
     const holdings = new Map<
       string,
@@ -403,7 +404,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     const holdingsList = Array.from(holdings.values())
       .filter((item) => item.quantity > 0)
       .map((item) => {
-        const assetMeta = assets.find((asset) => asset.id === item.assetId);
+        const assetMeta = assetById.get(item.assetId);
         const currentPrice = assetMeta?.price ?? 0;
         const marketValue = item.quantity * currentPrice;
         const costBasis = item.quantity * item.avgBuyPrice;
@@ -461,7 +462,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     const closedPositions = Array.from(holdings.values())
       .filter((item) => item.quantity === 0 && (item.totalBoughtAmount > 0 || item.totalSoldAmount > 0))
       .map((item) => {
-        const assetMeta = assets.find((asset) => asset.id === item.assetId);
+        const assetMeta = assetById.get(item.assetId);
         const symbol = item.symbol || assetMeta?.symbol || "";
         const name = item.name || assetMeta?.name || "Activo";
         const type = item.type || assetMeta?.type || "other";
@@ -506,7 +507,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
 
     const almostClosedPositions = Array.from(holdings.values())
       .map((item) => {
-        const assetMeta = assets.find((asset) => asset.id === item.assetId);
+        const assetMeta = assetById.get(item.assetId);
         const currentPrice = assetMeta?.price ?? 0;
         const remainingMarketValue = item.quantity * currentPrice;
         const remainingQtyPct = item.totalBoughtQty > 0 ? item.quantity / item.totalBoughtQty : Number.POSITIVE_INFINITY;
@@ -646,7 +647,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
         }
       });
       const value = Array.from(chartHoldings.values()).reduce((sum, item) => {
-        const assetMeta = assets.find((asset) => asset.id === item.assetId);
+        const assetMeta = assetById.get(item.assetId);
         return sum + item.quantity * (assetMeta?.price ?? 0);
       }, managesCash ? chartCashBalance : 0);
       chartPoints.push({ label: date, value });
@@ -715,20 +716,11 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
   }, [sortedTransactions, transactionSearchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / transactionsPerPage));
+  const boundedCurrentPage = Math.min(currentPage, totalPages);
   const paginatedTransactions = useMemo(() => {
-    const startIndex = (currentPage - 1) * transactionsPerPage;
+    const startIndex = (boundedCurrentPage - 1) * transactionsPerPage;
     return filteredTransactions.slice(startIndex, startIndex + transactionsPerPage);
-  }, [currentPage, filteredTransactions, transactionsPerPage]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [sortBy, transactionSearchQuery, transactionsPerPage, transactionRows.length]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  }, [boundedCurrentPage, filteredTransactions, transactionsPerPage]);
 
   const formatCurrencyByVisibility = (value: number) => (showAmounts ? formatCurrency(value) : "••••••");
   const formatPercentByVisibility = (value: number) => (showAmounts ? formatPercent(value) : "••••");
@@ -763,9 +755,11 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
   };
 
   const getDefaultTransactionAssetId = () => {
+    const sortedAssetIds = new Set(sortedAssets.map((asset) => asset.id));
+
     if (typeof window !== "undefined") {
       const storedAssetId = window.localStorage.getItem(lastTransactionAssetStorageKey);
-      if (storedAssetId && sortedAssets.some((asset) => asset.id === storedAssetId)) {
+      if (storedAssetId && sortedAssetIds.has(storedAssetId)) {
         return storedAssetId;
       }
     }
@@ -773,7 +767,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     const latestAssetTransaction =
       [...(portfolio?.transactions ?? [])]
         .sort((a, b) => b.date.localeCompare(a.date))
-        .find((transaction) => transaction.assetId && sortedAssets.some((asset) => asset.id === transaction.assetId)) ?? null;
+        .find((transaction) => transaction.assetId && sortedAssetIds.has(transaction.assetId)) ?? null;
 
     return latestAssetTransaction?.assetId ?? "";
   };
@@ -817,6 +811,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     const quantity = Number(transactionForm.quantity);
     const price = Number(transactionForm.price);
     const isAssetTransaction = isAssetTransactionType(transactionForm.type);
+    const selectedAsset = isAssetTransaction ? assets.find((asset) => asset.id === assetId) : null;
 
     if (isAssetTransaction) {
       if (!assetId || !transactionForm.date || !quantity || !price) {
@@ -840,9 +835,9 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
           transactionId: editingTransaction?.id,
           type: transactionForm.type,
           assetId: isAssetTransaction ? assetId : undefined,
-          assetSymbol: isAssetTransaction ? assets.find((asset) => asset.id === assetId)?.symbol || "" : "Efectivo",
-          assetName: isAssetTransaction ? assets.find((asset) => asset.id === assetId)?.name || "" : "Efectivo",
-          assetType: isAssetTransaction ? assets.find((asset) => asset.id === assetId)?.type || "stock" : "cash",
+          assetSymbol: isAssetTransaction ? selectedAsset?.symbol || "" : "Efectivo",
+          assetName: isAssetTransaction ? selectedAsset?.name || "" : "Efectivo",
+          assetType: isAssetTransaction ? selectedAsset?.type || "stock" : "cash",
           quantity: isAssetTransaction ? quantity : undefined,
           price,
           date: transactionForm.date,
@@ -918,6 +913,12 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
             ) : null}
           </div>
         </div>
+
+        {error ? (
+          <div className="rounded-2xl border border-rose-200/80 bg-rose-50/80 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950/70 dark:text-rose-200">
+            {error}
+          </div>
+        ) : null}
 
         {portfolioPerformance ? (
           <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
@@ -1319,14 +1320,20 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 </svg>
                 <input
                   value={transactionSearchQuery}
-                  onChange={(event) => setTransactionSearchQuery(event.target.value)}
+                  onChange={(event) => {
+                    setTransactionSearchQuery(event.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder="Buscar activo"
                   className="h-8 rounded-lg border border-slate-300 bg-slate-50 pl-8 pr-2 text-xs text-slate-700 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-sky-400 sm:h-10 sm:rounded-2xl sm:pr-3 sm:text-sm"
                 />
               </div>
               <select
                 value={sortBy}
-                onChange={(event) => setSortBy(event.target.value as "date" | "symbol" | "price" | "quantity")}
+                onChange={(event) => {
+                  setSortBy(event.target.value as "date" | "symbol" | "price" | "quantity");
+                  setCurrentPage(1);
+                }}
                 className="h-8 rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-auto sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm"
               >
                 <option value="date">Fecha</option>
@@ -1336,7 +1343,10 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
               </select>
               <select
                 value={transactionsPerPage}
-                onChange={(event) => setTransactionsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100)}
+                onChange={(event) => {
+                  setTransactionsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100);
+                  setCurrentPage(1);
+                }}
                 className="h-8 rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-auto sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm"
               >
                 <option value={10}>10 por página</option>
@@ -1430,21 +1440,21 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
           {filteredTransactions.length > 0 ? (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 sm:mt-4 sm:gap-3">
               <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-                Página {currentPage} de {totalPages} ({filteredTransactions.length} transacciones)
+                Página {boundedCurrentPage} de {totalPages} ({filteredTransactions.length} transacciones)
               </p>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setCurrentPage((value) => Math.max(1, value - 1))}
-                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((value) => Math.max(1, Math.min(value, totalPages) - 1))}
+                  disabled={boundedCurrentPage === 1}
                   className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:rounded-xl sm:px-3 sm:py-1.5 sm:text-sm"
                 >
                   Anterior
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCurrentPage((value) => Math.min(totalPages, value + 1))}
-                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((value) => Math.min(totalPages, Math.min(value, totalPages) + 1))}
+                  disabled={boundedCurrentPage >= totalPages}
                   className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:rounded-xl sm:px-3 sm:py-1.5 sm:text-sm"
                 >
                   Siguiente

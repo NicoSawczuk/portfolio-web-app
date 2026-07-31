@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { readPortfolios, writePortfolios } from "@/lib/portfolio-db";
+import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
 import { readAssets } from "@/lib/asset-db";
-import type { Asset, Portfolio, Transaction, TransactionType } from "@/lib/portfolio";
+import type { Asset, Transaction, TransactionType } from "@/lib/portfolio";
 
 function createObjectId() {
   return new ObjectId().toHexString();
@@ -10,8 +10,7 @@ function createObjectId() {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const portfolios = await readPortfolios();
-  const portfolio = portfolios.find((item) => item.id === id);
+  const portfolio = await readPortfolioById(id);
 
   if (!portfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
@@ -49,14 +48,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Faltan datos para crear la transacción de efectivo." }, { status: 400 });
     }
 
-    const portfolios = await readPortfolios();
-    const portfolioIndex = portfolios.findIndex((item) => item.id === id);
-
-    if (portfolioIndex === -1) {
+    const portfolio = await readPortfolioById(id);
+    if (!portfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
 
-    const portfolio = portfolios[portfolioIndex];
     const nextTransaction: Transaction = {
       id: createObjectId(),
       type,
@@ -90,16 +86,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
       portfolioAsset.transactions = [transactionWithAsset, ...portfolioAsset.transactions];
       portfolio.transactions = [transactionWithAsset, ...portfolio.transactions];
-      portfolios[portfolioIndex] = { ...portfolio, assets: portfolio.assets.map((item) => (item.id === assetId ? portfolioAsset : item)) };
-      await writePortfolios(portfolios);
-      return NextResponse.json(portfolios[portfolioIndex]);
+      portfolio.assets = portfolio.assets.map((item) => (item.id === assetId ? portfolioAsset : item));
+      const updatedPortfolio = await replacePortfolioById(id, portfolio);
+      if (!updatedPortfolio) {
+        return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+      }
+
+      return NextResponse.json(updatedPortfolio);
     }
 
     portfolio.transactions = [nextTransaction, ...portfolio.transactions];
-    portfolios[portfolioIndex] = portfolio;
-    await writePortfolios(portfolios);
+    const updatedPortfolio = await replacePortfolioById(id, portfolio);
+    if (!updatedPortfolio) {
+      return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+    }
 
-    return NextResponse.json(portfolios[portfolioIndex]);
+    return NextResponse.json(updatedPortfolio);
   }
 
   const { symbol, name, type, price } = body as { symbol: string; name: string; type: Asset["type"]; price?: number };
@@ -108,14 +110,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "El símbolo y el nombre son obligatorios." }, { status: 400 });
   }
 
-  const portfolios = await readPortfolios();
-  const portfolioIndex = portfolios.findIndex((item) => item.id === id);
-
-  if (portfolioIndex === -1) {
+  const portfolio = await readPortfolioById(id);
+  if (!portfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }
 
-  const portfolio = portfolios[portfolioIndex];
   const nextAsset: Asset = {
     id: createObjectId(),
     symbol: symbol.trim().toUpperCase(),
@@ -126,10 +125,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   };
 
   portfolio.assets = [nextAsset, ...portfolio.assets];
-  portfolios[portfolioIndex] = portfolio;
-  await writePortfolios(portfolios);
+  const updatedPortfolio = await replacePortfolioById(id, portfolio);
+  if (!updatedPortfolio) {
+    return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+  }
 
-  return NextResponse.json(portfolio);
+  return NextResponse.json(updatedPortfolio);
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -149,24 +150,23 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Faltan datos para editar el activo." }, { status: 400 });
     }
 
-    const portfolios = await readPortfolios();
-    const portfolioIndex = portfolios.findIndex((item) => item.id === id);
-
-    if (portfolioIndex === -1) {
+    const portfolio = await readPortfolioById(id);
+    if (!portfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
 
-    const portfolio = portfolios[portfolioIndex];
     portfolio.assets = portfolio.assets.map((asset) =>
       asset.id === assetId
         ? { ...asset, symbol: symbol.trim().toUpperCase(), name: name.trim(), type, price: Number(price ?? asset.price) }
         : asset
     );
 
-    portfolios[portfolioIndex] = portfolio;
-    await writePortfolios(portfolios);
+    const updatedPortfolio = await replacePortfolioById(id, portfolio);
+    if (!updatedPortfolio) {
+      return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+    }
 
-    return NextResponse.json(portfolios[portfolioIndex]);
+    return NextResponse.json(updatedPortfolio);
   }
 
   if (body?.kind !== "transaction") {
@@ -202,14 +202,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Faltan datos para editar la transacción de efectivo." }, { status: 400 });
   }
 
-  const portfolios = await readPortfolios();
-  const portfolioIndex = portfolios.findIndex((item) => item.id === id);
-
-  if (portfolioIndex === -1) {
+  const portfolio = await readPortfolioById(id);
+  if (!portfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }
 
-  const portfolio = portfolios[portfolioIndex];
   const existingTransaction = portfolio.transactions.find((transaction) => transaction.id === transactionId);
 
   if (!existingTransaction) {
@@ -253,9 +250,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     );
     portfolioAsset.transactions = [updatedTransaction, ...portfolioAsset.transactions];
     portfolio.assets = portfolio.assets.map((item) => (item.id === assetId ? portfolioAsset : item));
-    portfolios[portfolioIndex] = portfolio;
-    await writePortfolios(portfolios);
-    return NextResponse.json(portfolios[portfolioIndex]);
+    const savedPortfolio = await replacePortfolioById(id, portfolio);
+    if (!savedPortfolio) {
+      return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+    }
+
+    return NextResponse.json(savedPortfolio);
   }
 
   const updatedTransaction: Transaction = {
@@ -274,10 +274,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   portfolio.transactions = portfolio.transactions.map((transaction) =>
     transaction.id === transactionId ? updatedTransaction : transaction
   );
-  portfolios[portfolioIndex] = portfolio;
-  await writePortfolios(portfolios);
+  const savedPortfolio = await replacePortfolioById(id, portfolio);
+  if (!savedPortfolio) {
+    return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+  }
 
-  return NextResponse.json(portfolios[portfolioIndex]);
+  return NextResponse.json(savedPortfolio);
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -291,19 +293,18 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "El ID del activo es obligatorio." }, { status: 400 });
     }
 
-    const portfolios = await readPortfolios();
-    const portfolioIndex = portfolios.findIndex((item) => item.id === id);
-
-    if (portfolioIndex === -1) {
+    const portfolio = await readPortfolioById(id);
+    if (!portfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
 
-    const portfolio = portfolios[portfolioIndex];
     portfolio.assets = portfolio.assets.filter((asset) => asset.id !== assetId);
-    portfolios[portfolioIndex] = portfolio;
-    await writePortfolios(portfolios);
+    const savedPortfolio = await replacePortfolioById(id, portfolio);
+    if (!savedPortfolio) {
+      return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+    }
 
-    return NextResponse.json(portfolios[portfolioIndex]);
+    return NextResponse.json(savedPortfolio);
   }
 
   if (body?.kind !== "transaction") {
@@ -316,22 +317,21 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "El ID de la transacción es obligatorio." }, { status: 400 });
   }
 
-  const portfolios = await readPortfolios();
-  const portfolioIndex = portfolios.findIndex((item) => item.id === id);
-
-  if (portfolioIndex === -1) {
+  const portfolio = await readPortfolioById(id);
+  if (!portfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }
 
-  const portfolio = portfolios[portfolioIndex];
   portfolio.transactions = portfolio.transactions.filter((transaction) => transaction.id !== transactionId);
   portfolio.assets = portfolio.assets.map((asset) => ({
     ...asset,
     transactions: asset.transactions.filter((transaction) => transaction.id !== transactionId),
   }));
 
-  portfolios[portfolioIndex] = portfolio;
-  await writePortfolios(portfolios);
+  const savedPortfolio = await replacePortfolioById(id, portfolio);
+  if (!savedPortfolio) {
+    return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+  }
 
-  return NextResponse.json(portfolios[portfolioIndex]);
+  return NextResponse.json(savedPortfolio);
 }

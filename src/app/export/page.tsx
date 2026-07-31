@@ -2,6 +2,7 @@ import TransactionsExportPanel from "@/components/TransactionsExportPanel";
 import { readAssets } from "@/lib/asset-db";
 import { readPortfolios } from "@/lib/portfolio-db";
 
+// Export debe reflejar datos actuales de DB en cada request.
 export const dynamic = "force-dynamic";
 
 export default async function ExportPage() {

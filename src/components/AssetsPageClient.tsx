@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Asset } from "@/lib/portfolio";
 
 function emptyAssetForm() {
@@ -97,12 +97,6 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
     } finally {
       setRefreshingQuotes(false);
     }
-  };
-
-  const resetAssetForm = () => {
-    setAssetForm(emptyAssetForm());
-    setEditingAssetId(null);
-    setIsModalOpen(false);
   };
 
   const openAssetEditor = (asset?: Asset) => {
@@ -237,20 +231,11 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
   }, [assets, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / assetsPerPage));
+  const boundedCurrentPage = Math.min(currentPage, totalPages);
   const paginatedAssets = useMemo(() => {
-    const startIndex = (currentPage - 1) * assetsPerPage;
+    const startIndex = (boundedCurrentPage - 1) * assetsPerPage;
     return filteredAssets.slice(startIndex, startIndex + assetsPerPage);
-  }, [assetsPerPage, currentPage, filteredAssets]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [assetsPerPage, filteredAssets.length]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  }, [assetsPerPage, boundedCurrentPage, filteredAssets]);
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">
@@ -308,14 +293,20 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                   </svg>
                   <input
                     value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      setCurrentPage(1);
+                    }}
                     placeholder="Buscar"
                     className="h-8 w-full rounded-lg border border-slate-300 bg-slate-50 pl-8 pr-2 text-xs text-slate-700 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-sky-400 sm:h-9 sm:rounded-xl sm:pr-3 sm:text-sm"
                   />
                 </div>
                 <select
                   value={assetsPerPage}
-                  onChange={(event) => setAssetsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100)}
+                  onChange={(event) => {
+                    setAssetsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100);
+                    setCurrentPage(1);
+                  }}
                   className="h-8 rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-9 sm:rounded-xl sm:px-3 sm:text-sm"
                 >
                   <option value={10}>10</option>
@@ -392,21 +383,21 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
             {filteredAssets.length > 0 ? (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 sm:mt-4 sm:gap-3">
                 <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-                  Página {currentPage} de {totalPages} ({filteredAssets.length} activos)
+                  Página {boundedCurrentPage} de {totalPages} ({filteredAssets.length} activos)
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setCurrentPage((value) => Math.max(1, value - 1))}
-                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((value) => Math.max(1, Math.min(value, totalPages) - 1))}
+                    disabled={boundedCurrentPage === 1}
                     className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
                     Anterior
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCurrentPage((value) => Math.min(totalPages, value + 1))}
-                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage((value) => Math.min(totalPages, Math.min(value, totalPages) + 1))}
+                    disabled={boundedCurrentPage >= totalPages}
                     className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
                     Siguiente

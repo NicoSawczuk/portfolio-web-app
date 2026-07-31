@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import PortfolioDetailClient from "@/components/PortfolioDetailClient";
-import { readAssets, writeAssets } from "@/lib/asset-db";
-import { refreshAssetsQuotesWithCache } from "@/lib/finnhub-service";
-import { readPortfolios } from "@/lib/portfolio-db";
+import { readAssets } from "@/lib/asset-db";
+import { readPortfolioById } from "@/lib/portfolio-db";
 
 interface PortfolioDetailPageProps {
   params: Promise<{ id: string }>;
@@ -10,19 +9,11 @@ interface PortfolioDetailPageProps {
 
 export default async function PortfolioDetailPage({ params }: PortfolioDetailPageProps) {
   const { id } = await params;
-  const portfolios = await readPortfolios();
-  const portfolio = portfolios.find((item) => item.id === id);
+  const [portfolio, assets] = await Promise.all([readPortfolioById(id), readAssets()]);
 
   if (!portfolio) {
     notFound();
   }
 
-  const assets = await readAssets();
-  const { hydratedAssets, persistedAssets, hasPersistenceChanges } = await refreshAssetsQuotesWithCache(assets);
-
-  if (hasPersistenceChanges) {
-    await writeAssets(persistedAssets);
-  }
-
-  return <PortfolioDetailClient portfolioId={id} initialPortfolio={portfolio} initialAssets={hydratedAssets} />;
+  return <PortfolioDetailClient portfolioId={id} initialPortfolio={portfolio} initialAssets={assets} />;
 }

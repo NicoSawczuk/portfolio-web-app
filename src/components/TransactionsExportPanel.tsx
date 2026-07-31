@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Asset, Portfolio, Transaction } from "@/lib/portfolio";
+import type { Asset, Portfolio } from "@/lib/portfolio";
 
 interface ExportRow {
   portfolioId: string;
@@ -37,16 +37,18 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
   const [selectedPortfolioIds, setSelectedPortfolioIds] = useState<string[]>(() => initialPortfolios.map((portfolio) => portfolio.id));
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectedPortfolioIdsSet = useMemo(() => new Set(selectedPortfolioIds), [selectedPortfolioIds]);
+  const assetsById = useMemo(() => new Map(assets.map((asset) => [asset.id, asset])), [assets]);
 
   const selectedPortfolios = useMemo(
-    () => portfolios.filter((portfolio) => selectedPortfolioIds.includes(portfolio.id)),
-    [portfolios, selectedPortfolioIds]
+    () => portfolios.filter((portfolio) => selectedPortfolioIdsSet.has(portfolio.id)),
+    [portfolios, selectedPortfolioIdsSet]
   );
 
   const rows = useMemo<ExportRow[]>(() => {
     return selectedPortfolios.flatMap((portfolio) => {
       return (portfolio.transactions ?? []).map((transaction) => {
-        const assetMeta = assets.find((asset) => asset.id === transaction.assetId);
+        const assetMeta = transaction.assetId ? assetsById.get(transaction.assetId) : undefined;
 
         return {
           portfolioId: portfolio.id,
@@ -67,7 +69,7 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
         };
       });
     });
-  }, [assets, selectedPortfolios]);
+  }, [assetsById, selectedPortfolios]);
 
   const togglePortfolioSelection = (portfolioId: string) => {
     setSelectedPortfolioIds((current) => {
@@ -177,7 +179,7 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
           <p className="font-semibold text-slate-800 dark:text-slate-100">Seleccioná los portfolios</p>
           <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
             {portfolios.map((portfolio) => {
-              const isSelected = selectedPortfolioIds.includes(portfolio.id);
+              const isSelected = selectedPortfolioIdsSet.has(portfolio.id);
 
               return (
                 <button
