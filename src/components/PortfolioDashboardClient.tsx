@@ -206,7 +206,7 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                       <h3 className="text-base font-semibold">{portfolio.name}</h3>
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm text-slate-600 dark:text-slate-400">
-                      {portfolio.description || "Sin descripción"}
+                      {portfolio.description}
                     </p>
                     <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Creado {formatDate(portfolio.createdAt)}</p>
                   </button>
@@ -270,9 +270,6 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-xl font-semibold">{editingPortfolio ? "Editar portfolio" : "Crear portfolio"}</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {editingPortfolio ? "Actualizá los datos del portfolio." : "Agregá un nuevo portfolio para empezar a ordenar tus inversiones."}
-                </p>
               </div>
               <button
                 type="button"

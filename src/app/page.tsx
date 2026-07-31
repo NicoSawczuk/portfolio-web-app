@@ -170,7 +170,7 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
       ) : (
         <>
           <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h2 className="text-xl font-semibold">Distribución de tu plata por portfolio</h2>
+            <h2 className="text-xl font-semibold">Inversión por portfolio</h2>
             <div className="mt-5 space-y-3">
               {portfolioDistribution.map(({ portfolio, performance }) => {
                 const share = totalMarketValue > 0 ? (performance.totalMarketValue / totalMarketValue) * 100 : 0;
@@ -198,7 +198,7 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
           </div>
 
           <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h2 className="text-xl font-semibold">Tipos de activos por portfolio</h2>
+            <h2 className="text-xl font-semibold">Activos por portfolio</h2>
             <div className="mt-5 space-y-4">
               {portfolioDistribution.map(({ portfolio, performance }) => (
                 <Link
@@ -236,7 +236,7 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
           </div>
 
           <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h2 className="text-xl font-semibold">Ganancias comparadas entre portfolios</h2>
+            <h2 className="text-xl font-semibold">Ganancias por portfolio</h2>
             <div className="mt-5 space-y-3">
               {portfolioGainsRanking.map(({ portfolio, performance }) => (
                 <Link
@@ -260,7 +260,7 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
           </div>
 
           <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h2 className="text-xl font-semibold">Ganancias totales consolidadas</h2>
+            <h2 className="text-xl font-semibold">Ganancias totales</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
                 <p className="text-sm text-slate-500">Costo total invertido</p>

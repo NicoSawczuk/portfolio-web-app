@@ -900,7 +900,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
             <div className="max-w-2xl">
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{portfolio?.name || "Portfolio"}</h1>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                {portfolio?.description || "Sin descripción"}
+                {portfolio?.description}
               </p>
             </div>
             {portfolioPerformance ? (
@@ -1101,7 +1101,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
 
                       {almostClosedMode === "percent" ? (
                         <label className="mt-3 block text-sm text-slate-600 dark:text-slate-300">
-                          Remanente máximo (% cantidad)
+                          Remanente máximo (% cantidad) 
                           <input
                             type="text"
                             inputMode="decimal"
@@ -1121,7 +1121,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                       ) : (
                         <div className="mt-3 flex flex-wrap gap-3">
                           <label className="text-sm text-slate-600 dark:text-slate-300">
-                            Cantidad máxima
+                            Cantidad máxima 
                             <input
                               type="text"
                               inputMode="decimal"
@@ -1136,7 +1136,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                             />
                           </label>
                           <label className="text-sm text-slate-600 dark:text-slate-300">
-                            Valor máximo (USD)
+                            Valor máximo (USD) 
                             <input
                               type="text"
                               inputMode="decimal"
@@ -1382,7 +1382,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 <div>Precio</div>
                 <div>Cantidad</div>
                 <div>Monto</div>
-                <div></div>
+                <div>Acciones</div>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {paginatedTransactions.map((transaction) => (
@@ -1471,9 +1471,6 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-xl font-semibold">{editingTransaction ? "Editar transacción" : "Nueva transacción"}</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Cargá fecha, activo, cantidad, precio y notas.
-                </p>
               </div>
               <button
                 type="button"

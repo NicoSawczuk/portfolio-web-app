@@ -414,9 +414,6 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-xl font-semibold">{editingAssetId ? "Editar activo" : "Crear activo"}</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Completá símbolo, nombre, tipo y precio para guardar el activo.
-                </p>
               </div>
               <button
                 type="button"
