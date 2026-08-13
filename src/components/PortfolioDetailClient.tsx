@@ -1605,7 +1605,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         type="date"
                         value={transactionForm.date}
                         onChange={(event) => setTransactionForm((current) => ({ ...current, date: event.target.value }))}
-                        className="control modal-field-input"
+                        className="control modal-field-input-date"
                       />
                     </label>
                   </div>
