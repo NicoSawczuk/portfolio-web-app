@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import type { Asset, Portfolio, Transaction, TransactionType } from "@/lib/portfolio";
 import PortfolioValuationCard from "@/components/PortfolioValuationCard";
 
@@ -738,6 +737,18 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
 
   const formatCurrencyByVisibility = (value: number) => (showAmounts ? formatCurrency(value) : "••••••");
   const formatPercentByVisibility = (value: number) => (showAmounts ? formatPercent(value) : "••••");
+  const formatSharePercent = (numerator: number, denominator: number) => {
+    if (!showAmounts) {
+      return "••••";
+    }
+
+    if (!Number.isFinite(denominator) || denominator <= 0) {
+      return "0,0%";
+    }
+
+    const share = (numerator / denominator) * 100;
+    return `${share.toFixed(1)}%`;
+  };
 
   const getTransactionAmount = (transaction: Transaction) => {
     if (!isAssetTransactionType(transaction.type)) {
@@ -904,45 +915,45 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <div className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
-          <Link href="/portfolios" className="text-sm font-medium text-sky-600 hover:text-sky-700">
-            ← Volver a portfolios
-          </Link>
-          <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{portfolio?.name || "Portfolio"}</h1>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                {portfolio?.description}
-              </p>
+    <main className="page">
+      <div className="page-container">
+        <div className="card">
+          <div className="card-header portfolio-detail-header">
+            <div className="portfolio-detail-header-copy">
+              <p className="eyebrow">Portfolio</p>
+              <h1 className="card-title card-title--page">{portfolio?.name || "Portfolio"}</h1>
             </div>
             {portfolioPerformance ? (
-              <PortfolioValuationCard
-                totalMarketValue={portfolioPerformance.totalMarketValue}
-                totalPnl={portfolioPerformance.totalPnl}
-                totalPnlPct={portfolioPerformance.totalPnlPct}
-                showAmounts={showAmounts}
-              />
+              <div className="portfolio-detail-summary portfolio-detail-summary--header">
+                <PortfolioValuationCard
+                  totalMarketValue={portfolioPerformance.totalMarketValue}
+                  totalPnl={portfolioPerformance.totalPnl}
+                  totalPnlPct={portfolioPerformance.totalPnlPct}
+                  showAmounts={showAmounts}
+                />
+              </div>
+            ) : null}
+            {portfolio?.description ? (
+              <p className="card-description portfolio-detail-header-description">{portfolio.description}</p>
             ) : null}
           </div>
         </div>
 
         {error ? (
-          <div className="rounded-2xl border border-rose-200/80 bg-rose-50/80 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950/70 dark:text-rose-200">
+          <div className="alert-error">
             {error}
           </div>
         ) : null}
 
         {portfolioPerformance ? (
-          <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold">Rendimientos</h2>
+          <div className="card portfolio-detail-section">
+            <div className="portfolio-detail-section-header">
+              <div className="portfolio-detail-title-row">
+                <h2 className="portfolio-detail-section-title">Rendimientos</h2>
                 <button
                   type="button"
                   onClick={() => setShowAmounts((value) => !value)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:h-8 sm:w-8"
+                  className="button button-secondary portfolio-detail-eye-toggle"
                   aria-label={showAmounts ? "Ocultar montos" : "Mostrar montos"}
                   title={showAmounts ? "Ocultar montos" : "Mostrar montos"}
                 >
@@ -954,25 +965,25 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex rounded-full bg-slate-200 p-1 dark:bg-slate-800">
+                <div className="segmented-control">
                   <button
                     type="button"
                     onClick={() => setPerformanceView("composition")}
-                    className={`rounded-full px-3 py-1.5 text-sm font-medium ${performanceView === "composition" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                    className={`segmented-button ${performanceView === "composition" ? "segmented-button--active" : ""}`}
                   >
                     Composición
                   </button>
                   <button
                     type="button"
                     onClick={() => setPerformanceView("closed")}
-                    className={`rounded-full px-3 py-1.5 text-sm font-medium ${performanceView === "closed" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                    className={`segmented-button ${performanceView === "closed" ? "segmented-button--active" : ""}`}
                   >
                     Cerradas
                   </button>
                   <button
                     type="button"
                     onClick={() => setPerformanceView("chart")}
-                    className={`rounded-full px-3 py-1.5 text-sm font-medium ${performanceView === "chart" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                    className={`segmented-button ${performanceView === "chart" ? "segmented-button--active" : ""}`}
                   >
                     Gráfico
                   </button>
@@ -982,12 +993,12 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
 
             {performanceView === "chart" ? (
               <div className="mt-6">
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+                <div className="portfolio-detail-panel">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h3 className="text-lg font-semibold">Evolución de la valuación</h3>
                     </div>
-                    <div className="text-sm text-slate-500">Fechas de movimientos</div>
+                    <div className="text-sm text-slate-400">Fechas de movimientos</div>
                   </div>
                   <div className="mt-4 overflow-x-auto">
                     <svg viewBox="0 0 320 180" className="h-48 min-w-[300px] w-full">
@@ -1000,7 +1011,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                           y2={52 + row * 50}
                           stroke="currentColor"
                           strokeDasharray="4 4"
-                          className="text-slate-300 dark:text-slate-700"
+                          className="text-slate-700"
                         />
                       ))}
                       {(() => {
@@ -1035,11 +1046,11 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                       })()}
                     </svg>
                   </div>
-                  <div className="mt-3 rounded-2xl border border-slate-200/70 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900">
+                  <div className="mt-3 rounded-2xl border border-slate-700 bg-[#111c30] px-3 py-2 text-sm">
                     {hoveredChartPoint ? (
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <span className="font-semibold text-slate-800 dark:text-slate-100">{hoveredChartPoint.label}</span>
-                        <span className="text-slate-600 dark:text-slate-300">Valor: {formatCurrencyByVisibility(hoveredChartPoint.value)}</span>
+                        <span className="font-semibold text-white">{hoveredChartPoint.label}</span>
+                        <span className="text-slate-300">Valor: {formatCurrencyByVisibility(hoveredChartPoint.value)}</span>
                       </div>
                     ) : null}
                   </div>
@@ -1047,35 +1058,35 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
               </div>
             ) : performanceView === "closed" ? (
               <div className="mt-6">
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+                <div className="portfolio-detail-panel">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h3 className="text-lg font-semibold">Posiciones cerradas</h3>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-1 text-sm text-slate-400">
                         {closedView === "closed"
                           ? "Activos totalmente vendidos con resultado realizado."
                           : "Activos con remanente mínimo para analizar como casi cerrados."}
                       </p>
                     </div>
-                    <div className="inline-flex rounded-full bg-slate-200 p-1 dark:bg-slate-800">
+                    <div className="segmented-control">
                       <button
                         type="button"
                         onClick={() => setClosedView("closed")}
-                        className={`rounded-full px-3 py-1.5 text-sm font-medium ${closedView === "closed" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                        className={`segmented-button ${closedView === "closed" ? "segmented-button--active" : ""}`}
                       >
                         Cerradas
                       </button>
                       <button
                         type="button"
                         onClick={() => setClosedView("almost")}
-                        className={`rounded-full px-3 py-1.5 text-sm font-medium ${closedView === "almost" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                        className={`segmented-button ${closedView === "almost" ? "segmented-button--active" : ""}`}
                       >
                         Casi cerradas
                       </button>
                     </div>
                   </div>
 
-                  <div className="mt-3 min-h-[20px] text-sm text-slate-600 dark:text-slate-300">
+                  <div className="mt-3 min-h-[20px] text-sm text-slate-300">
                     {closedView === "closed" && portfolioPerformance.closedPositions.length ? (
                       <>
                         Resultado: {portfolioPerformance.closedPositionsSummary.realizedPnl >= 0 ? "+" : ""}
@@ -1093,20 +1104,20 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                   </div>
 
                   {closedView === "almost" ? (
-                    <div className="mt-3 rounded-2xl border border-slate-200/70 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="mt-3 rounded-2xl border border-slate-700 bg-[#111c30] p-3">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                        <div className="inline-flex rounded-full bg-slate-200 p-1 dark:bg-slate-800">
+                        <div className="segmented-control">
                           <button
                             type="button"
                             onClick={() => setAlmostClosedMode("percent")}
-                            className={`rounded-full px-3 py-1.5 text-sm font-medium ${almostClosedMode === "percent" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                            className={`segmented-button ${almostClosedMode === "percent" ? "segmented-button--active" : ""}`}
                           >
                             Por porcentaje
                           </button>
                           <button
                             type="button"
                             onClick={() => setAlmostClosedMode("absolute")}
-                            className={`rounded-full px-3 py-1.5 text-sm font-medium ${almostClosedMode === "absolute" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}
+                            className={`segmented-button ${almostClosedMode === "absolute" ? "segmented-button--active" : ""}`}
                           >
                             Por umbral
                           </button>
@@ -1114,7 +1125,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                       </div>
 
                       {almostClosedMode === "percent" ? (
-                        <label className="mt-3 block text-sm text-slate-600 dark:text-slate-300">
+                        <label className="mt-3 block text-sm text-slate-300">
                           Remanente máximo (% cantidad) 
                           <input
                             type="text"
@@ -1129,12 +1140,12 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                               setAlmostClosedPercentThreshold(next);
                               setAlmostClosedPercentInput(formatThresholdInput(next));
                             }}
-                            className="mt-1 w-40 rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                            className="mt-1 w-40 rounded-xl border border-slate-700 bg-[#0f172a] px-3 py-1.5 text-sm text-white outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
                           />
                         </label>
                       ) : (
                         <div className="mt-3 flex flex-wrap gap-3">
-                          <label className="text-sm text-slate-600 dark:text-slate-300">
+                          <label className="text-sm text-slate-300">
                             Cantidad máxima 
                             <input
                               type="text"
@@ -1146,10 +1157,10 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                                 setAlmostClosedQtyThreshold(next);
                                 setAlmostClosedQtyInput(formatThresholdInput(next));
                               }}
-                              className="mt-1 w-36 rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                              className="mt-1 w-36 rounded-xl border border-slate-700 bg-[#0f172a] px-3 py-1.5 text-sm text-white outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
                             />
                           </label>
-                          <label className="text-sm text-slate-600 dark:text-slate-300">
+                          <label className="text-sm text-slate-300">
                             Valor máximo (USD) 
                             <input
                               type="text"
@@ -1161,7 +1172,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                                 setAlmostClosedUsdThreshold(next);
                                 setAlmostClosedUsdInput(formatThresholdInput(next));
                               }}
-                              className="mt-1 w-36 rounded-xl border border-slate-300 bg-slate-50 px-3 py-1.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                              className="mt-1 w-36 rounded-xl border border-slate-700 bg-[#0f172a] px-3 py-1.5 text-sm text-white outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
                             />
                           </label>
                         </div>
@@ -1175,12 +1186,12 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         const color = getAssetColor(position.assetId, index);
 
                         return (
-                          <div key={position.assetId} className="rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                          <div key={position.assetId} className="rounded-2xl border border-slate-700/80 bg-[#111c30] p-3">
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex items-center gap-3">
                                 <span className="inline-flex h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
                                 <div>
-                                  <p className="font-semibold text-slate-800 dark:text-slate-100">{position.name}</p>
+                                  <p className="font-semibold text-white">{position.name}</p>
                                   <p className="text-xs text-slate-500">{position.symbol} · {assetTypeLabels[position.type]}</p>
                                 </div>
                               </div>
@@ -1193,7 +1204,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                               </div>
                             </div>
 
-                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
                               <span>Comprado: {formatCurrencyByVisibility(position.totalBoughtAmount)}</span>
                               <span>Vendido: {formatCurrencyByVisibility(position.totalSoldAmount)}</span>
                               <span>Base realizada: {formatCurrencyByVisibility(position.realizedCost)}</span>
@@ -1206,12 +1217,12 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         const color = getAssetColor(position.assetId, index);
 
                         return (
-                          <div key={position.assetId} className="rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                          <div key={position.assetId} className="rounded-2xl border border-slate-700/80 bg-[#111c30] p-3">
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex items-center gap-3">
                                 <span className="inline-flex h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
                                 <div>
-                                  <p className="font-semibold text-slate-800 dark:text-slate-100">{position.name}</p>
+                                  <p className="font-semibold text-white">{position.name}</p>
                                   <p className="text-xs text-slate-500">{position.symbol} · {assetTypeLabels[position.type]}</p>
                                 </div>
                               </div>
@@ -1224,7 +1235,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                               </div>
                             </div>
 
-                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
                               <span>Realizado: {position.realizedPnl >= 0 ? "+" : ""}{formatCurrencyByVisibility(position.realizedPnl)}</span>
                               <span>Remanente: {formatCurrencyByVisibility(position.remainingMarketValue)}</span>
                               <span>% remanente: {(position.remainingQtyPct * 100).toFixed(2)}%</span>
@@ -1234,7 +1245,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         );
                       })
                     ) : (
-                      <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                      <div className="rounded-2xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">
                         {closedView === "closed"
                           ? "No hay posiciones cerradas para mostrar."
                           : "No hay posiciones casi cerradas para mostrar."}
@@ -1245,17 +1256,17 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
               </div>
             ) : (
               <div className="mt-6">
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+                <div className="portfolio-detail-panel">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h3 className="text-lg font-semibold">Composición</h3>
                       <p className="mt-1 text-sm text-slate-500">Elige cómo ver la tenencia</p>
                     </div>
-                    <div className="inline-flex rounded-full bg-slate-200 p-1 dark:bg-slate-800">
-                      <button type="button" onClick={() => setCompositionView("valuation")} className={`rounded-full px-3 py-1.5 text-sm font-medium ${compositionView === "valuation" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}>
+                    <div className="segmented-control">
+                      <button type="button" onClick={() => setCompositionView("valuation")} className={`segmented-button ${compositionView === "valuation" ? "segmented-button--active" : ""}`}>
                         Por valuación
                       </button>
-                      <button type="button" onClick={() => setCompositionView("type")} className={`rounded-full px-3 py-1.5 text-sm font-medium ${compositionView === "type" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"}`}>
+                      <button type="button" onClick={() => setCompositionView("type")} className={`segmented-button ${compositionView === "type" ? "segmented-button--active" : ""}`}>
                         Por tipo
                       </button>
                     </div>
@@ -1267,21 +1278,21 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         portfolioPerformance.holdings.map((holding, index) => {
                           const color = getAssetColor(holding.assetId, index);
                           return (
-                            <div key={holding.assetId} className="rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                            <div key={holding.assetId} className="rounded-2xl border border-slate-700/80 bg-[#111c30] p-3">
                               <div className="flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-3">
                                   <span className="inline-flex h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
                                   <div>
-                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{holding.name}</p>
+                                    <p className="font-semibold text-white">{holding.name}</p>
                                     <p className="text-xs text-slate-500">{holding.symbol} · {assetTypeLabels[holding.type]}</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-semibold text-slate-900 dark:text-slate-100">{formatCurrencyByVisibility(holding.marketValue)}</p>
-                                  <p className="text-xs text-slate-500">{(holding.marketValue / portfolioPerformance.totalMarketValue * 100).toFixed(1)}%</p>
+                                  <p className="font-semibold text-white">{formatCurrencyByVisibility(holding.marketValue)}</p>
+                                  <p className="text-xs text-slate-500">{formatSharePercent(holding.marketValue, portfolioPerformance.totalMarketValue)}</p>
                                 </div>
                               </div>
-                              <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                              <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
                                 <span>Cant.: {holding.quantity}</span>
                                 <span>Promedio: {formatCurrencyByVisibility(holding.avgBuyPrice)}</span>
                                 <span>Actual: {formatCurrencyByVisibility(holding.currentPrice)}</span>
@@ -1293,24 +1304,24 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                           );
                         })
                       ) : (
-                        <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                        <div className="rounded-2xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">
                           No hay posiciones abiertas para mostrar.
                         </div>
                       )
                     ) : portfolioPerformance.assetTypeBreakdown.length ? (
                       portfolioPerformance.assetTypeBreakdown.map((item) => (
-                        <div key={item.type} className="rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div key={item.type} className="rounded-2xl border border-slate-700/80 bg-[#111c30] p-3">
                           <div className="flex items-center justify-between gap-3 text-sm">
-                            <span className="font-medium text-slate-700 dark:text-slate-200">{assetTypeLabels[item.type]}</span>
-                            <span className="text-slate-500">{(item.marketValue / portfolioPerformance.totalMarketValue * 100).toFixed(1)}%</span>
+                            <span className="font-medium text-slate-200">{assetTypeLabels[item.type]}</span>
+                            <span className="text-slate-500">{formatSharePercent(item.marketValue, portfolioPerformance.totalMarketValue)}</span>
                           </div>
-                          <div className="mt-2 h-2 rounded-full bg-slate-200 dark:bg-slate-800">
+                          <div className="mt-2 h-2 rounded-full bg-slate-800">
                             <div className="h-2 rounded-full bg-sky-500" style={{ width: `${portfolioPerformance.totalMarketValue ? (item.marketValue / portfolioPerformance.totalMarketValue) * 100 : 0}%` }} />
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                      <div className="rounded-2xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">
                         Sin tipos de activos para mostrar.
                       </div>
                     )}
@@ -1321,14 +1332,14 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
           </div>
         ) : null}
 
-        <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="card portfolio-detail-section">
+          <div className="portfolio-detail-section-header portfolio-detail-transactions-header">
             <div>
-              <h2 className="text-xl font-semibold">Transacciones</h2>
+              <h2 className="portfolio-detail-section-title">Transacciones</h2>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <div className="relative">
-                <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <div className="portfolio-detail-toolbar portfolio-detail-transactions-toolbar">
+              <div className="portfolio-detail-search">
+                <svg viewBox="0 0 24 24" className="portfolio-detail-search-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8" />
                   <path d="m21 21-4.3-4.3" />
                 </svg>
@@ -1339,7 +1350,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                     setCurrentPage(1);
                   }}
                   placeholder="Buscar activo"
-                  className="h-8 rounded-lg border border-slate-300 bg-slate-50 pl-8 pr-2 text-xs text-slate-700 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-sky-400 sm:h-10 sm:rounded-2xl sm:pr-3 sm:text-sm"
+                  className="control portfolio-detail-search-input"
                 />
               </div>
               <select
@@ -1348,7 +1359,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                   setSortBy(event.target.value as "date" | "symbol" | "price" | "quantity");
                   setCurrentPage(1);
                 }}
-                className="h-8 rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-auto sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm"
+                className="control portfolio-detail-select"
               >
                 <option value="date">Fecha</option>
                 <option value="symbol">Símbolo</option>
@@ -1361,7 +1372,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                   setTransactionsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100);
                   setCurrentPage(1);
                 }}
-                className="h-8 rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-auto sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm"
+                className="control portfolio-detail-select"
               >
                 <option value={10}>10 por página</option>
                 <option value={20}>20 por página</option>
@@ -1373,9 +1384,9 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 onClick={openCreateTransactionModal}
                 aria-label="Agregar transacción"
                 title="Agregar transacción"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 sm:h-10 sm:w-10 sm:rounded-2xl"
+                className="button button-primary portfolio-detail-add-button"
               >
-                <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="portfolio-detail-add-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M12 5v14" />
                   <path d="M5 12h14" />
                 </svg>
@@ -1384,12 +1395,12 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
           </div>
 
           {filteredTransactions.length === 0 ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400 sm:mt-6 sm:p-6">
+            <div className="mt-4 rounded-2xl border border-dashed border-slate-700 p-4 text-sm text-slate-400 sm:mt-6 sm:p-6">
               {transactionSearchQuery.trim() ? "No hay transacciones para ese activo." : "No hay transacciones cargadas aún."}
             </div>
           ) : (
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200/70 dark:border-slate-800 sm:mt-6">
-              <div className="grid min-w-[650px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.72fr_0.22fr] gap-1 bg-slate-50 px-1.5 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-950/80 dark:text-slate-400 sm:min-w-[760px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.85fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-xs sm:tracking-[0.2em]">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-700/80 sm:mt-6">
+              <div className="grid min-w-[650px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.72fr_0.22fr] gap-1 bg-[#111c30] px-1.5 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 sm:min-w-[760px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.85fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-xs sm:tracking-[0.2em]">
                 <div>Fecha</div>
                 <div>Tipo</div>
                 <div>Símbolo</div>
@@ -1398,12 +1409,12 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 <div>Monto</div>
                 <div>Acciones</div>
               </div>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="divide-y divide-slate-800">
                 {paginatedTransactions.map((transaction) => (
-                  <div key={transaction.id} className="grid min-w-[650px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.72fr_0.22fr] gap-1 px-1.5 py-2 text-center text-[11px] text-slate-700 dark:text-slate-200 sm:min-w-[760px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.85fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-sm">
+                  <div key={transaction.id} className="grid min-w-[650px] grid-cols-[0.9fr_0.68fr_0.72fr_0.72fr_0.5fr_0.72fr_0.22fr] gap-1 px-1.5 py-2 text-center text-[11px] text-slate-200 sm:min-w-[760px] sm:grid-cols-[1fr_0.75fr_0.85fr_0.85fr_0.7fr_0.85fr_0.3fr] sm:gap-3 sm:px-4 sm:py-3 sm:text-sm">
                     <div>{transaction.date}</div>
                     <div className="flex justify-center">
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:px-2.5 sm:py-1 sm:text-xs">
+                      <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300 sm:px-2.5 sm:py-1 sm:text-xs">
                         {getTransactionTypeLabel(transaction.type)}
                       </span>
                     </div>
@@ -1422,7 +1433,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         onClick={() => openEditTransactionModal(transaction)}
                         aria-label="Editar transacción"
                         title="Editar transacción"
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 text-sky-600 transition hover:bg-slate-50 hover:text-sky-700 dark:border-slate-700 dark:text-sky-400 dark:hover:bg-slate-800 sm:h-8 sm:w-8 sm:rounded-xl"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-[#0f172a] text-sky-400 transition hover:border-slate-500 hover:bg-[#162238] sm:h-8 sm:w-8 sm:rounded-xl"
                       >
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M12 20h9" />
@@ -1434,7 +1445,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                         onClick={() => handleDeleteTransaction(transaction.id)}
                         aria-label="Eliminar transacción"
                         title="Eliminar transacción"
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-300 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 dark:border-rose-700/60 dark:text-rose-400 dark:hover:bg-rose-950/50 sm:h-8 sm:w-8 sm:rounded-xl"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-[#0f172a] text-rose-400 transition hover:border-rose-500/70 hover:bg-rose-500/10 sm:h-8 sm:w-8 sm:rounded-xl"
                       >
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M3 6h18" />
@@ -1453,7 +1464,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
 
           {filteredTransactions.length > 0 ? (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 sm:mt-4 sm:gap-3">
-              <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+              <p className="text-xs text-slate-400 sm:text-sm">
                 Página {boundedCurrentPage} de {totalPages} ({filteredTransactions.length} transacciones)
               </p>
               <div className="flex items-center gap-2">
@@ -1461,7 +1472,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                   type="button"
                   onClick={() => setCurrentPage((value) => Math.max(1, Math.min(value, totalPages) - 1))}
                   disabled={boundedCurrentPage === 1}
-                  className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:rounded-xl sm:px-3 sm:py-1.5 sm:text-sm"
+                  className="rounded-lg border border-slate-700 bg-[#111c30] px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-[#162238] disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-xl sm:px-3 sm:py-1.5 sm:text-sm"
                 >
                   Anterior
                 </button>
@@ -1469,7 +1480,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                   type="button"
                   onClick={() => setCurrentPage((value) => Math.min(totalPages, Math.min(value, totalPages) + 1))}
                   disabled={boundedCurrentPage >= totalPages}
-                  className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:rounded-xl sm:px-3 sm:py-1.5 sm:text-sm"
+                  className="rounded-lg border border-slate-700 bg-[#111c30] px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-[#162238] disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-xl sm:px-3 sm:py-1.5 sm:text-sm"
                 >
                   Siguiente
                 </button>
@@ -1480,28 +1491,29 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
       </div>
 
       {isTransactionModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6">
-          <div className="w-full max-w-xl rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-start justify-between gap-3">
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-header">
               <div>
-                <h3 className="text-xl font-semibold">{editingTransaction ? "Editar transacción" : "Nueva transacción"}</h3>
+                <h3 className="modal-title">{editingTransaction ? "Editar transacción" : "Nueva transacción"}</h3>
               </div>
               <button
                 type="button"
                 onClick={closeTransactionModal}
-                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                aria-label="Cerrar"
+                className="modal-close"
               >
                 ✕
               </button>
             </div>
 
-            <div className="mt-6 space-y-4">
+            <div className="modal-form">
               {(() => {
                 const isAssetTransaction = isAssetTransactionType(transactionForm.type);
 
                 return (
                   <>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <label className="modal-field">
                 Tipo de transacción
                 <select
                   value={transactionForm.type}
@@ -1523,7 +1535,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                       return nextForm;
                     });
                   }}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                  className="control modal-field-input"
                 >
                   {transactionTypes.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -1534,78 +1546,109 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
               </label>
 
               {isAssetTransaction ? (
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label className="modal-field">
                   Activo
-                  <input
-                    type="search"
-                    value={assetSelectorQuery}
-                    onChange={(event) => {
-                      const nextQuery = event.target.value;
-                      setAssetSelectorQuery(nextQuery);
+                  <div className="modal-inline-controls modal-inline-controls--asset-picker">
+                    <input
+                      type="search"
+                      value={assetSelectorQuery}
+                      onChange={(event) => {
+                        const nextQuery = event.target.value;
+                        setAssetSelectorQuery(nextQuery);
 
-                      const nextMatches = filterAssetsByQuery(sortedAssets, nextQuery);
-                      if (!nextMatches.length) {
-                        setTransactionForm((current) => ({ ...current, assetId: "" }));
-                        return;
-                      }
-
-                      setTransactionForm((current) => {
-                        if (!nextQuery.trim()) {
-                          return current;
+                        const nextMatches = filterAssetsByQuery(sortedAssets, nextQuery);
+                        if (!nextMatches.length) {
+                          setTransactionForm((current) => ({ ...current, assetId: "" }));
+                          return;
                         }
 
-                        if (current.assetId === nextMatches[0].id) {
-                          return current;
-                        }
+                        setTransactionForm((current) => {
+                          if (!nextQuery.trim()) {
+                            return current;
+                          }
 
-                        return {
-                          ...current,
-                          assetId: nextMatches[0].id,
-                        };
-                      });
-                    }}
-                    placeholder="Buscar activo por símbolo o nombre"
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
-                  />
-                  <select
-                    value={transactionForm.assetId}
-                    onChange={(event) => setTransactionForm((current) => ({ ...current, assetId: event.target.value }))}
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
-                  >
-                    <option value="">Seleccioná un activo</option>
-                    {selectableAssets.map((asset) => (
-                      <option key={asset.id} value={asset.id}>
-                        {asset.symbol} — {asset.name} — {formatCurrency(asset.price)}
-                      </option>
-                    ))}
-                  </select>
+                          if (current.assetId === nextMatches[0].id) {
+                            return current;
+                          }
+
+                          return {
+                            ...current,
+                            assetId: nextMatches[0].id,
+                          };
+                        });
+                      }}
+                      placeholder="Buscar"
+                      className="control modal-field-input"
+                    />
+                    <select
+                      value={transactionForm.assetId}
+                      onChange={(event) => setTransactionForm((current) => ({ ...current, assetId: event.target.value }))}
+                      className="control modal-field-input"
+                    >
+                      <option value="">Seleccioná un activo</option>
+                      {selectableAssets.map((asset) => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.symbol} — {asset.name} — {formatCurrency(asset.price)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </label>
               ) : null}
 
-              <div className={`grid gap-4 ${isAssetTransaction ? "sm:grid-cols-2" : ""}`}>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                  Fecha
-                  <input
-                    type="date"
-                    value={transactionForm.date}
-                    onChange={(event) => setTransactionForm((current) => ({ ...current, date: event.target.value }))}
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
-                  />
-                </label>
-                {isAssetTransaction ? (
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                    Cantidad
+              {isAssetTransaction ? (
+                <>
+                  <div className="modal-form-grid modal-form-grid--single">
+                    <label className="modal-field">
+                      Fecha
+                      <input
+                        type="date"
+                        value={transactionForm.date}
+                        onChange={(event) => setTransactionForm((current) => ({ ...current, date: event.target.value }))}
+                        className="control modal-field-input"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="modal-form-grid modal-form-grid--pair">
+                    <label className="modal-field">
+                      Cantidad
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*[.,]?[0-9]*"
+                        value={transactionForm.quantity}
+                        onChange={(event) => setTransactionForm((current) => ({ ...current, quantity: event.target.value }))}
+                        className="control modal-field-input"
+                      />
+                    </label>
+
+                    <label className="modal-field">
+                      Precio
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*[.,]?[0-9]*"
+                        value={transactionForm.price}
+                        onChange={(event) => setTransactionForm((current) => ({ ...current, price: event.target.value }))}
+                        className="control modal-field-input"
+                      />
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <div className="modal-form-grid">
+                  <label className="modal-field">
+                    Fecha
                     <input
-                      type="text"
-                      inputMode="decimal"
-                      pattern="[0-9]*[.,]?[0-9]*"
-                      value={transactionForm.quantity}
-                      onChange={(event) => setTransactionForm((current) => ({ ...current, quantity: event.target.value }))}
-                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                      type="date"
+                      value={transactionForm.date}
+                      onChange={(event) => setTransactionForm((current) => ({ ...current, date: event.target.value }))}
+                      className="control modal-field-input"
                     />
                   </label>
-                ) : (
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+
+                  <label className="modal-field">
                     Monto
                     <input
                       type="text"
@@ -1613,32 +1656,18 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                       pattern="[0-9]*[.,]?[0-9]*"
                       value={transactionForm.price}
                       onChange={(event) => setTransactionForm((current) => ({ ...current, price: event.target.value }))}
-                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                      className="control modal-field-input"
                     />
                   </label>
-                )}
-              </div>
+                </div>
+              )}
 
-              {isAssetTransaction ? (
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-                  Precio
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*[.,]?[0-9]*"
-                    value={transactionForm.price}
-                    onChange={(event) => setTransactionForm((current) => ({ ...current, price: event.target.value }))}
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
-                  />
-                </label>
-              ) : null}
-
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <label className="modal-field">
                 Notas
                 <textarea
                   value={transactionForm.notes}
                   onChange={(event) => setTransactionForm((current) => ({ ...current, notes: event.target.value }))}
-                  className="mt-2 min-h-[72px] w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                  className="control modal-field-input modal-textarea modal-textarea--compact"
                   placeholder="Opcional"
                 />
               </label>
@@ -1647,11 +1676,11 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
               })()}
             </div>
 
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
+            <div className="modal-actions">
               <button
                 type="button"
                 onClick={closeTransactionModal}
-                className="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="button button-secondary modal-button"
               >
                 Cancelar
               </button>
@@ -1659,7 +1688,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 type="button"
                 onClick={handleSaveTransaction}
                 disabled={saving}
-                className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-sky-600 dark:hover:bg-sky-500"
+                className="button button-primary modal-button"
               >
                 {saving ? "Guardando..." : editingTransaction ? "Guardar cambios" : "Agregar transacción"}
               </button>

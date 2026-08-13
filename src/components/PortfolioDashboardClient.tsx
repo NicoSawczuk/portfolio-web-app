@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Asset, Portfolio } from "@/lib/portfolio";
 import { getPortfolioSummary } from "@/lib/portfolio-summary";
 import PortfolioValuationCard from "@/components/PortfolioValuationCard";
@@ -28,8 +28,47 @@ interface PortfolioDashboardClientProps {
   initialAssets: Asset[];
 }
 
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="header-action-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function EyeIcon({ hidden = false }: { hidden?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {hidden ? <path d="M3 3l18 18" /> : null}
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  );
+}
+
 export default function PortfolioDashboardClient({ initialPortfolios, initialAssets }: PortfolioDashboardClientProps) {
-  const router = useRouter();
   const [portfolios, setPortfolios] = useState(initialPortfolios);
   const [assets] = useState(initialAssets);
   const [showAmounts, setShowAmounts] = useState(true);
@@ -133,131 +172,114 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <div className="flex flex-col gap-3 rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:gap-4 sm:p-8 sm:flex-row sm:items-end sm:justify-between">
+    <main className="page">
+      <section className="page-container">
+        <header className="card card-header">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.24em] text-sky-600">Portfolios</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Tus carteras</h1>
+            <p className="eyebrow">Portfolios</p>
+            <h1 className="card-title card-title--page">Tus carteras</h1>
           </div>
-          <button
-            type="button"
-            onClick={openCreateModal}
-            aria-label="Agregar portfolio"
-            title="Agregar portfolio"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 sm:h-11 sm:w-11 sm:rounded-2xl"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 5v14" />
-              <path d="M5 12h14" />
-            </svg>
-          </button>
-        </div>
+
+          <div className="header-actions">
+            <button
+              type="button"
+              onClick={openCreateModal}
+              aria-label="Agregar portfolio"
+              title="Agregar portfolio"
+              className="button button-primary header-action-button"
+            >
+              <PlusIcon />
+            </button>
+          </div>
+        </header>
 
         {error ? (
-          <div className="rounded-2xl border border-rose-200/80 bg-rose-50/80 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950/70 dark:text-rose-200">
+          <div className="alert-error">
             {error}
           </div>
         ) : null}
 
         {portfolios.length === 0 ? (
-          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center dark:border-slate-700 dark:bg-slate-900/70">
-            <p className="text-lg font-semibold">Aún no hay portfolios.</p>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Creá el primero para empezar a organizar tus inversiones.
-            </p>
+          <div className="rounded-[22px] border border-dashed border-slate-700 bg-[#0e172a] px-6 py-12 text-center">
+            <p className="text-lg font-semibold text-white">Aún no hay portfolios.</p>
+            <p className="mt-2 text-sm text-slate-400">Creá el primero para empezar a organizar tus inversiones.</p>
           </div>
         ) : (
-          <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div>
-                <h2 className="text-xl font-semibold">Portfolios</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAmounts((value) => !value)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:h-8 sm:w-8"
-                  aria-label={showAmounts ? "Ocultar montos" : "Mostrar montos"}
-                  title={showAmounts ? "Ocultar montos" : "Mostrar montos"}
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
-                    <circle cx="12" cy="12" r="3" />
-                    {!showAmounts ? <path d="M3 3l18 18" /> : null}
-                  </svg>
-                </button>
-              </div>
+          <div className="card card--panel">
+            <div className="card-header">
+              <h2 className="card-title">Portfolios</h2>
+              <button
+                type="button"
+                onClick={() => setShowAmounts((value) => !value)}
+                className="button button-secondary inline-flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium"
+                aria-label={showAmounts ? "Ocultar montos" : "Mostrar montos"}
+                title={showAmounts ? "Ocultar montos" : "Mostrar montos"}
+              >
+                <EyeIcon hidden={!showAmounts} />
+                <span>{showAmounts ? "Ocultar" : "Mostrar"}</span>
+              </button>
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div className="card-content card-content--list">
               {portfolioSummaries.map(({ portfolio, summary }) => (
-                <div
+                <article
                   key={portfolio.id}
-                  className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/70"
+                  className="card-item relative"
                 >
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/portfolios/${portfolio.id}`)}
-                    className="-m-2 min-w-0 flex-1 rounded-xl p-2 text-left outline-none transition hover:bg-slate-100/70 focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-900/70"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-semibold">{portfolio.name}</h3>
+                  <Link
+                    href={`/portfolios/${portfolio.id}`}
+                    aria-label={`Abrir portfolio ${portfolio.name}`}
+                    className="absolute inset-0 z-0 rounded-[18px] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500/60"
+                  />
+
+                  <div className="pointer-events-none relative z-10 flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-4">
+                    <div className="min-w-0 p-1 pr-2">
+                      <div className="space-y-1.5">
+                        <h3 className="card-title">{portfolio.name}</h3>
+                        <p className="card-description line-clamp-2">{portfolio.description}</p>
+                      </div>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-sm text-slate-600 dark:text-slate-400">
-                      {portfolio.description}
-                    </p>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Creado {formatDate(portfolio.createdAt)}</p>
-                  </button>
 
-                  <div className="flex flex-col items-start gap-2.5 lg:min-w-[290px] lg:items-end lg:gap-3">
-                    <PortfolioValuationCard
-                      totalMarketValue={summary?.totalMarketValue ?? 0}
-                      totalPnl={summary?.totalPnl ?? 0}
-                      totalPnlPct={summary?.totalPnlPct ?? 0}
-                      showAmounts={showAmounts}
-                      className="w-full lg:min-w-[320px]"
-                    />
+                    <div className="w-full lg:w-[280px] lg:justify-self-end">
+                      <PortfolioValuationCard
+                        totalMarketValue={summary?.totalMarketValue ?? 0}
+                        totalPnl={summary?.totalPnl ?? 0}
+                        totalPnlPct={summary?.totalPnlPct ?? 0}
+                        showAmounts={showAmounts}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
 
-                    <div className="flex flex-wrap justify-end gap-2">
+                  <div className="pointer-events-none relative z-10 mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">Creado {formatDate(portfolio.createdAt)}</p>
+
+                    <div className="pointer-events-auto flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
+                        onClick={() => {
                           openEditModal(portfolio);
                         }}
                         aria-label="Editar portfolio"
                         title="Editar portfolio"
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 sm:h-8 sm:w-8 sm:rounded-xl"
+                        className="button button-secondary inline-flex h-10 w-10 items-center justify-center bg-[#0f172a]"
                       >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
-                        </svg>
+                        <PencilIcon />
                       </button>
                       <button
                         type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
+                        onClick={() => {
                           handleDelete(portfolio.id);
                         }}
                         aria-label="Eliminar portfolio"
                         title="Eliminar portfolio"
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-300 text-rose-700 transition hover:bg-rose-50 dark:border-rose-700/60 dark:text-rose-300 dark:hover:bg-rose-950/50 sm:h-8 sm:w-8 sm:rounded-xl"
+                        className="button button-secondary inline-flex h-10 w-10 items-center justify-center bg-[#0f172a] hover:border-rose-500/70 hover:bg-rose-500/10 hover:text-rose-300"
                       >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M3 6h18" />
-                          <path d="M8 6V4h8v2" />
-                          <path d="M19 6l-1 14H6L5 6" />
-                          <path d="M10 11v6" />
-                          <path d="M14 11v6" />
-                        </svg>
+                        <TrashIcon />
                       </button>
                     </div>
                   </div>
-                  </div>
-                </div>
+                </article>
               ))}
             </div>
           </div>
@@ -265,58 +287,58 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
       </section>
 
       {isModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6">
-          <div className="w-full max-w-lg rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-start justify-between gap-3">
+        <div className="modal-backdrop">
+          <div className="modal modal--narrow">
+            <div className="modal-header">
               <div>
-                <h3 className="text-xl font-semibold">{editingPortfolio ? "Editar portfolio" : "Crear portfolio"}</h3>
+                <h3 className="modal-title">{editingPortfolio ? "Editar portfolio" : "Crear portfolio"}</h3>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                className="modal-close"
               >
                 ✕
               </button>
             </div>
 
-            <div className="mt-6 space-y-4">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+            <div className="modal-form">
+              <label className="modal-field">
                 Nombre
                 <input
                   value={formState.name}
                   onChange={(event) => handleChange("name", event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                  className="control modal-field-input"
                   placeholder="Ej. Jubilación"
                 />
               </label>
 
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <label className="modal-field">
                 Descripción
                 <textarea
                   value={formState.description}
                   onChange={(event) => handleChange("description", event.target.value)}
-                  className="mt-2 min-h-[110px] w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                  className="control modal-field-input modal-textarea"
                   placeholder="Opcional"
                 />
               </label>
 
-              <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              <label className="modal-toggle-row">
                 <span>Gestionar efectivo en este portfolio</span>
                 <input
                   type="checkbox"
                   checked={Boolean(formState.managesCash)}
                   onChange={(event) => handleChange("managesCash", event.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 dark:border-slate-600 dark:bg-slate-900"
+                  className="modal-checkbox"
                 />
               </label>
             </div>
 
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
+            <div className="modal-actions">
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="button button-secondary modal-button"
               >
                 Cancelar
               </button>
@@ -324,7 +346,7 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-sky-600 dark:hover:bg-sky-500"
+                className="button button-primary modal-button"
               >
                 {saving ? "Guardando..." : editingPortfolio ? "Guardar cambios" : "Crear portfolio"}
               </button>

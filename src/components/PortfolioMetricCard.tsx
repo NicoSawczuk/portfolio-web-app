@@ -20,10 +20,10 @@ export default function PortfolioMetricCard({
   }[tone];
 
   return (
-    <div className={`rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 ${compact ? "px-3 py-2" : "px-4 py-3"}`}>
-      {title ? <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">{title}</p> : null}
+    <div className={`rounded-2xl border border-slate-700/80 bg-[#111c30] ${compact ? "px-3 py-2" : "px-4 py-3"}`}>
+      {title ? <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">{title}</p> : null}
       <p className={`mt-1 font-semibold ${compact ? "text-sm" : "text-base"} ${toneClasses}`}>{value}</p>
-      {subtitle ? <p className={`mt-1 text-xs text-slate-500 ${compact ? "" : "text-sm"}`}>{subtitle}</p> : null}
+      {subtitle ? <p className={`mt-1 text-xs text-slate-400 ${compact ? "" : "text-sm"}`}>{subtitle}</p> : null}
     </div>
   );
 }
