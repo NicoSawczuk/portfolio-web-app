@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
 import { readAssets } from "@/lib/asset-db";
+import { getSessionFromRequest } from "@/lib/auth";
 import type { Asset, Transaction, TransactionType } from "@/lib/portfolio";
 
 function createObjectId() {
@@ -9,8 +10,13 @@ function createObjectId() {
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = getSessionFromRequest(_request);
+  if (!session) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const { id } = await params;
-  const portfolio = await readPortfolioById(id);
+  const portfolio = await readPortfolioById(id, session.userId);
 
   if (!portfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
@@ -20,6 +26,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const { id } = await params;
   const body = await request.json();
 
@@ -48,7 +59,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Faltan datos para crear la transacción de efectivo." }, { status: 400 });
     }
 
-    const portfolio = await readPortfolioById(id);
+    const portfolio = await readPortfolioById(id, session.userId);
     if (!portfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
@@ -87,7 +98,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       portfolioAsset.transactions = [transactionWithAsset, ...portfolioAsset.transactions];
       portfolio.transactions = [transactionWithAsset, ...portfolio.transactions];
       portfolio.assets = portfolio.assets.map((item) => (item.id === assetId ? portfolioAsset : item));
-      const updatedPortfolio = await replacePortfolioById(id, portfolio);
+      const updatedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
       if (!updatedPortfolio) {
         return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
       }
@@ -96,7 +107,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     portfolio.transactions = [nextTransaction, ...portfolio.transactions];
-    const updatedPortfolio = await replacePortfolioById(id, portfolio);
+    const updatedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
     if (!updatedPortfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
@@ -110,7 +121,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "El símbolo y el nombre son obligatorios." }, { status: 400 });
   }
 
-  const portfolio = await readPortfolioById(id);
+  const portfolio = await readPortfolioById(id, session.userId);
   if (!portfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }
@@ -125,7 +136,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   };
 
   portfolio.assets = [nextAsset, ...portfolio.assets];
-  const updatedPortfolio = await replacePortfolioById(id, portfolio);
+  const updatedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
   if (!updatedPortfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }
@@ -134,6 +145,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const { id } = await params;
   const body = await request.json();
 
@@ -150,7 +166,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Faltan datos para editar el activo." }, { status: 400 });
     }
 
-    const portfolio = await readPortfolioById(id);
+    const portfolio = await readPortfolioById(id, session.userId);
     if (!portfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
@@ -161,7 +177,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         : asset
     );
 
-    const updatedPortfolio = await replacePortfolioById(id, portfolio);
+    const updatedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
     if (!updatedPortfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
@@ -202,7 +218,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Faltan datos para editar la transacción de efectivo." }, { status: 400 });
   }
 
-  const portfolio = await readPortfolioById(id);
+  const portfolio = await readPortfolioById(id, session.userId);
   if (!portfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }
@@ -250,7 +266,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     );
     portfolioAsset.transactions = [updatedTransaction, ...portfolioAsset.transactions];
     portfolio.assets = portfolio.assets.map((item) => (item.id === assetId ? portfolioAsset : item));
-    const savedPortfolio = await replacePortfolioById(id, portfolio);
+    const savedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
     if (!savedPortfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
@@ -274,7 +290,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   portfolio.transactions = portfolio.transactions.map((transaction) =>
     transaction.id === transactionId ? updatedTransaction : transaction
   );
-  const savedPortfolio = await replacePortfolioById(id, portfolio);
+  const savedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
   if (!savedPortfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }
@@ -283,6 +299,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
   const { id } = await params;
   const body = await request.json();
 
@@ -293,13 +314,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "El ID del activo es obligatorio." }, { status: 400 });
     }
 
-    const portfolio = await readPortfolioById(id);
+    const portfolio = await readPortfolioById(id, session.userId);
     if (!portfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
 
     portfolio.assets = portfolio.assets.filter((asset) => asset.id !== assetId);
-    const savedPortfolio = await replacePortfolioById(id, portfolio);
+    const savedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
     if (!savedPortfolio) {
       return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
     }
@@ -317,7 +338,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "El ID de la transacción es obligatorio." }, { status: 400 });
   }
 
-  const portfolio = await readPortfolioById(id);
+  const portfolio = await readPortfolioById(id, session.userId);
   if (!portfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }
@@ -328,7 +349,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     transactions: asset.transactions.filter((transaction) => transaction.id !== transactionId),
   }));
 
-  const savedPortfolio = await replacePortfolioById(id, portfolio);
+  const savedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
   if (!savedPortfolio) {
     return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
   }

@@ -29,6 +29,7 @@ export interface Asset {
 
 export interface Portfolio {
   id: string;
+  ownerUserId?: string;
   name: string;
   description: string;
   managesCash?: boolean;

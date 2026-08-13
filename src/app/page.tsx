@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { readAssets } from "@/lib/asset-db";
 import { readPortfolios } from "@/lib/portfolio-db";
 import { calculatePortfolioPerformance } from "@/lib/portfolio-summary";
+import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import type { Asset } from "@/lib/portfolio";
 
 export const dynamic = "force-dynamic";
@@ -62,8 +65,8 @@ interface HomeViewData {
   }>;
 }
 
-async function getHomeViewData(): Promise<HomeViewData> {
-  const [portfolios, assets] = await Promise.all([readPortfolios(), readAssets()]);
+async function getHomeViewData(userId: string): Promise<HomeViewData> {
+  const [portfolios, assets] = await Promise.all([readPortfolios(userId), readAssets()]);
 
   const portfolioPerformances = portfolios
     .map((portfolio) => {
@@ -279,7 +282,15 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
 }
 
 export default async function HomePage() {
-  const homeDataPromise = getHomeViewData();
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const session = token ? verifySessionToken(token) : null;
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  const homeDataPromise = getHomeViewData(session.userId);
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">

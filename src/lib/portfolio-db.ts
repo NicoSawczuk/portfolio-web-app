@@ -13,6 +13,7 @@ async function getPortfoliosCollection() {
       const collection = db.collection<Portfolio>(collectionName);
       await collection.createIndex({ id: 1 }, { unique: true });
       await collection.createIndex({ createdAt: -1 });
+      await collection.createIndex({ ownerUserId: 1, createdAt: -1 });
       return collection;
     })();
   }
@@ -30,16 +31,18 @@ function normalizePortfolio(portfolio: Portfolio): Portfolio {
   };
 }
 
-export async function readPortfolios(): Promise<Portfolio[]> {
+export async function readPortfolios(ownerUserId?: string): Promise<Portfolio[]> {
   const collection = await getPortfoliosCollection();
-  const portfolios = await collection.find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+  const filter = ownerUserId ? { ownerUserId } : {};
+  const portfolios = await collection.find(filter, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
 
   return portfolios.map(normalizePortfolio);
 }
 
-export async function readPortfolioById(id: string): Promise<Portfolio | null> {
+export async function readPortfolioById(id: string, ownerUserId?: string): Promise<Portfolio | null> {
   const collection = await getPortfoliosCollection();
-  const portfolio = await collection.findOne({ id }, { projection: { _id: 0 } });
+  const filter = ownerUserId ? { id, ownerUserId } : { id };
+  const portfolio = await collection.findOne(filter, { projection: { _id: 0 } });
   if (!portfolio) {
     return null;
   }
@@ -54,10 +57,11 @@ export async function insertPortfolio(portfolio: Portfolio): Promise<Portfolio> 
   return normalized;
 }
 
-export async function replacePortfolioById(id: string, portfolio: Portfolio): Promise<Portfolio | null> {
+export async function replacePortfolioById(id: string, portfolio: Portfolio, ownerUserId?: string): Promise<Portfolio | null> {
   const collection = await getPortfoliosCollection();
   const normalized = normalizePortfolio({ ...portfolio, id });
-  const result = await collection.replaceOne({ id }, normalized);
+  const filter = ownerUserId ? { id, ownerUserId } : { id };
+  const result = await collection.replaceOne(filter, normalized);
   if (result.matchedCount === 0) {
     return null;
   }
@@ -67,7 +71,8 @@ export async function replacePortfolioById(id: string, portfolio: Portfolio): Pr
 
 export async function updatePortfolioFields(
   id: string,
-  fields: Partial<Pick<Portfolio, "name" | "description" | "managesCash">>
+  fields: Partial<Pick<Portfolio, "name" | "description" | "managesCash">>,
+  ownerUserId?: string
 ): Promise<Portfolio | null> {
   const collection = await getPortfoliosCollection();
   const update: Partial<Portfolio> = {};
@@ -83,11 +88,13 @@ export async function updatePortfolioFields(
   }
 
   if (Object.keys(update).length === 0) {
-    return readPortfolioById(id);
+    return readPortfolioById(id, ownerUserId);
   }
 
+  const filter = ownerUserId ? { id, ownerUserId } : { id };
+
   const result = await collection.findOneAndUpdate(
-    { id },
+    filter,
     { $set: update },
     { returnDocument: "after", projection: { _id: 0 } }
   );
@@ -95,9 +102,10 @@ export async function updatePortfolioFields(
   return result ? normalizePortfolio(result) : null;
 }
 
-export async function deletePortfolioById(id: string): Promise<boolean> {
+export async function deletePortfolioById(id: string, ownerUserId?: string): Promise<boolean> {
   const collection = await getPortfoliosCollection();
-  const result = await collection.deleteOne({ id });
+  const filter = ownerUserId ? { id, ownerUserId } : { id };
+  const result = await collection.deleteOne(filter);
   return result.deletedCount > 0;
 }
 
