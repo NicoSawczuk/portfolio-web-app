@@ -16,6 +16,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Portfolios de inversión",
   description: "Dashboard para gestionar portfolios y transacciones de inversión",
+  icons: {
+    icon: [
+      { url: "/logos/favicon.ico" },
+      { url: "/logos/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/logos/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/logos/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
+    shortcut: [{ url: "/logos/favicon.ico" }],
+  },
 };
 
 export default function RootLayout({

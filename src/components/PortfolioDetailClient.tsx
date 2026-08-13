@@ -145,6 +145,20 @@ function parsePositiveNumberFromInput(value: string, current: number) {
   return parsed;
 }
 
+function parsePositiveDecimalInput(value: string) {
+  const normalized = value.trim().replace(/,/g, ".");
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
 function formatThresholdInput(value: number) {
   return Number.isFinite(value) ? String(value) : "";
 }
@@ -808,8 +822,8 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
 
   const handleSaveTransaction = async () => {
     const assetId = transactionForm.assetId;
-    const quantity = Number(transactionForm.quantity);
-    const price = Number(transactionForm.price);
+    const quantity = parsePositiveDecimalInput(transactionForm.quantity);
+    const price = parsePositiveDecimalInput(transactionForm.price);
     const isAssetTransaction = isAssetTransactionType(transactionForm.type);
     const selectedAsset = isAssetTransaction ? assets.find((asset) => asset.id === assetId) : null;
 
@@ -893,7 +907,7 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
-          <Link href="/" className="text-sm font-medium text-sky-600 hover:text-sky-700">
+          <Link href="/portfolios" className="text-sm font-medium text-sky-600 hover:text-sky-700">
             ← Volver a portfolios
           </Link>
           <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -1582,10 +1596,9 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                     Cantidad
                     <input
-                      type="number"
+                      type="text"
                       inputMode="decimal"
-                      min="0"
-                      step="any"
+                      pattern="[0-9]*[.,]?[0-9]*"
                       value={transactionForm.quantity}
                       onChange={(event) => setTransactionForm((current) => ({ ...current, quantity: event.target.value }))}
                       className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
@@ -1595,10 +1608,9 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                     Monto
                     <input
-                      type="number"
+                      type="text"
                       inputMode="decimal"
-                      min="0"
-                      step="any"
+                      pattern="[0-9]*[.,]?[0-9]*"
                       value={transactionForm.price}
                       onChange={(event) => setTransactionForm((current) => ({ ...current, price: event.target.value }))}
                       className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
@@ -1611,10 +1623,9 @@ export default function PortfolioDetailClient({ portfolioId, initialPortfolio, i
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
                   Precio
                   <input
-                    type="number"
+                    type="text"
                     inputMode="decimal"
-                    min="0"
-                    step="any"
+                    pattern="[0-9]*[.,]?[0-9]*"
                     value={transactionForm.price}
                     onChange={(event) => setTransactionForm((current) => ({ ...current, price: event.target.value }))}
                     className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"

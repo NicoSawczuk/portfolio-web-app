@@ -35,6 +35,7 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
   const [portfolios] = useState<Portfolio[]>(initialPortfolios);
   const [assets] = useState<Asset[]>(initialAssets);
   const [selectedPortfolioIds, setSelectedPortfolioIds] = useState<string[]>(() => initialPortfolios.map((portfolio) => portfolio.id));
+  const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv");
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedPortfolioIdsSet = useMemo(() => new Set(selectedPortfolioIds), [selectedPortfolioIds]);
@@ -85,6 +86,7 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
       return;
     }
 
+    setError(null);
     setExporting(true);
 
     try {
@@ -124,24 +126,44 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
         asset_price: "assetPrice",
       };
 
-      const csv = [
-        headers.join(","),
-        ...rows.map((row) =>
-          headers
-            .map((header) => {
-              const key = headerMap[header];
-              const value = key ? row[key] : "";
-              return escapeCsv(value as string | number | undefined);
-            })
-            .join(",")
-        ),
-      ].join("\n");
+      let blob: Blob;
+      let fileExtension: "csv" | "json";
 
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      if (exportFormat === "json") {
+        const jsonRows = rows.map((row) => {
+          const jsonRow: Record<string, string | number> = {};
+          headers.forEach((header) => {
+            const key = headerMap[header];
+            const value = key ? row[key] : "";
+            jsonRow[header] = value as string | number;
+          });
+          return jsonRow;
+        });
+
+        blob = new Blob([JSON.stringify(jsonRows, null, 2)], { type: "application/json;charset=utf-8;" });
+        fileExtension = "json";
+      } else {
+        const csv = [
+          headers.join(","),
+          ...rows.map((row) =>
+            headers
+              .map((header) => {
+                const key = headerMap[header];
+                const value = key ? row[key] : "";
+                return escapeCsv(value as string | number | undefined);
+              })
+              .join(",")
+          ),
+        ].join("\n");
+
+        blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        fileExtension = "csv";
+      }
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `transacciones-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.download = `transacciones-${new Date().toISOString().slice(0, 10)}.${fileExtension}`;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -152,61 +174,78 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
   };
 
   return (
-    <section className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-[0.24em] text-sky-600">Exportación</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:mt-2 sm:text-3xl">Exportar transacciones</h1>
-        </div>
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={exporting || rows.length === 0}
-          className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-sky-600 dark:hover:bg-sky-500 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
-        >
-          {exporting ? "Exportando..." : "Exportar transacciones"}
-        </button>
-      </div>
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">
+      <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <div className="flex flex-col gap-3 rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:gap-4 sm:p-8 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.24em] text-sky-600">Exportación</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Exportar transacciones</h1>
+          </div>
+          <div className="flex items-end gap-2 sm:gap-3">
+            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 sm:text-sm">
+              <select
+                value={exportFormat}
+                onChange={(event) => setExportFormat(event.target.value as "csv" | "json")}
+                className="rounded-xl border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-800 shadow-sm transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900/40 sm:text-sm"
+              >
+                <option value="csv">CSV</option>
+                <option value="json">JSON</option>
+              </select>
+            </label>
 
-      {error ? (
-        <div className="mt-6 rounded-2xl border border-rose-200/80 bg-rose-50/80 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950/70 dark:text-rose-200">
-          {error}
-        </div>
-      ) : null}
-
-      <div className="mt-4 space-y-3 sm:mt-6 sm:space-y-4">
-        <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300 sm:p-4 sm:text-sm">
-          <p className="font-semibold text-slate-800 dark:text-slate-100">Seleccioná los portfolios</p>
-          <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
-            {portfolios.map((portfolio) => {
-              const isSelected = selectedPortfolioIdsSet.has(portfolio.id);
-
-              return (
-                <button
-                  key={portfolio.id}
-                  type="button"
-                  onClick={() => togglePortfolioSelection(portfolio.id)}
-                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition sm:px-3 sm:py-1.5 sm:text-sm ${
-                    isSelected
-                      ? "border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-400 dark:bg-sky-950/60 dark:text-sky-300"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  }`}
-                >
-                  {portfolio.name}
-                </button>
-              );
-            })}
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || rows.length === 0}
+              className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-sky-600 dark:hover:bg-sky-500 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
+            >
+              {exporting ? "Exportando..." : "Exportar transacciones"}
+            </button>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300 sm:p-4 sm:text-sm">
-          {rows.length === 0 ? (
-            <p>No hay transacciones para exportar con los portfolios seleccionados.</p>
-          ) : (
-            <p>Se exportarán {rows.length} transacciones con datos del portfolio y el activo.</p>
-          )}
+        <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+          {error ? (
+            <div className="rounded-2xl border border-rose-200/80 bg-rose-50/80 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950/70 dark:text-rose-200">
+              {error}
+            </div>
+          ) : null}
+
+          <div className={`${error ? "mt-4 sm:mt-6" : ""} space-y-3 sm:space-y-4`}>
+            <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300 sm:p-4 sm:text-sm">
+              <p className="font-semibold text-slate-800 dark:text-slate-100">Seleccioná los portfolios</p>
+              <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
+                {portfolios.map((portfolio) => {
+                  const isSelected = selectedPortfolioIdsSet.has(portfolio.id);
+
+                  return (
+                    <button
+                      key={portfolio.id}
+                      type="button"
+                      onClick={() => togglePortfolioSelection(portfolio.id)}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition sm:px-3 sm:py-1.5 sm:text-sm ${
+                        isSelected
+                          ? "border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-400 dark:bg-sky-950/60 dark:text-sky-300"
+                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      {portfolio.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300 sm:p-4 sm:text-sm">
+              {rows.length === 0 ? (
+                <p>No hay transacciones para exportar con los portfolios seleccionados.</p>
+              ) : (
+                <p>Se exportarán {rows.length} transacciones con datos del portfolio y el activo.</p>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </main>
   );
 }

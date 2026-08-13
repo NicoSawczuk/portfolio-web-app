@@ -11,7 +11,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
+    <div className="flex min-h-screen flex-col">
       <SidebarNav />
       <div className="flex-1">{children}</div>
     </div>
