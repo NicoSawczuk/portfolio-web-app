@@ -114,12 +114,12 @@ async function getHomeViewData(userId: string): Promise<HomeViewData> {
 function HomeFallback() {
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="h-[106px] animate-pulse rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5" />
-        <div className="h-[106px] animate-pulse rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5" />
-        <div className="h-[106px] animate-pulse rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5" />
+      <div className="home-skeleton-grid">
+        <div className="home-skeleton-card" />
+        <div className="home-skeleton-card" />
+        <div className="home-skeleton-card" />
       </div>
-      <div className="h-[280px] animate-pulse rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6" />
+      <div className="home-skeleton-panel" />
     </>
   );
 }
@@ -137,44 +137,47 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Ganancia total</p>
-          <p className={`mt-2 text-2xl font-semibold ${totalPnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+      <div className="home-metrics-grid">
+        <div className="card-item home-metric-card">
+          <p className="home-metric-label">Ganancia total</p>
+          <p className={`home-metric-value ${totalPnl >= 0 ? "home-value-positive" : "home-value-negative"}`}>
             {totalPnl >= 0 ? "+" : ""}
             {formatCurrency(totalPnl)}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Rendimiento total</p>
-          <p className={`mt-2 text-2xl font-semibold ${totalPnlPct >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+        <div className="card-item home-metric-card">
+          <p className="home-metric-label">Rendimiento total</p>
+          <p className={`home-metric-value ${totalPnlPct >= 0 ? "home-value-positive" : "home-value-negative"}`}>
             {formatPercent(totalPnlPct)}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Capital actual total</p>
-          <p className="mt-2 text-2xl font-semibold">{formatCurrency(totalMarketValue)}</p>
+        <div className="card-item home-metric-card">
+          <p className="home-metric-label">Capital actual total</p>
+          <p className="home-metric-value home-value-neutral">{formatCurrency(totalMarketValue)}</p>
         </div>
       </div>
 
       {portfolioPerformances.length === 0 ? (
-        <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center dark:border-slate-700 dark:bg-slate-900/70">
-          <p className="text-lg font-semibold">Todavía no hay información consolidada.</p>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        <div className="portfolio-empty-state">
+          <p className="portfolio-empty-title">Todavía no hay información consolidada.</p>
+          <p className="portfolio-empty-description">
             Creá portfolios y cargá transacciones para ver el resumen global.
           </p>
           <Link
             href="/portfolios"
-            className="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500"
+            className="button button-primary home-empty-link"
           >
             Ir a Portfolios
           </Link>
         </div>
       ) : (
         <>
-          <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h2 className="text-xl font-semibold">Inversión por portfolio</h2>
-            <div className="mt-5 space-y-3">
+          <div className="card card--panel home-section">
+            <div className="card-header">
+              <h2 className="card-title">Inversión por portfolio</h2>
+            </div>
+            <div className="card-content home-section-content">
+              <div className="home-list">
               {portfolioDistribution.map(({ portfolio, performance }) => {
                 const share = totalMarketValue > 0 ? (performance.totalMarketValue / totalMarketValue) * 100 : 0;
 
@@ -182,35 +185,39 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
                   <Link
                     key={portfolio.id}
                     href={`/portfolios/${portfolio.id}`}
-                    className="block w-full cursor-pointer rounded-2xl border border-slate-200/70 bg-slate-50 p-3 transition hover:border-sky-300 hover:bg-slate-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:border-sky-600/70 dark:hover:bg-slate-900/70"
+                    className="home-link-card"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                      <p className="font-semibold">{portfolio.name}</p>
-                      <div className="text-right">
-                        <p className="font-semibold">{formatCurrency(performance.totalMarketValue)}</p>
-                        <p className="text-xs text-slate-500">{share.toFixed(1)}%</p>
+                    <div className="home-row">
+                      <p className="home-link-title">{portfolio.name}</p>
+                      <div className="home-link-right">
+                        <p className="home-link-value">{formatCurrency(performance.totalMarketValue)}</p>
+                        <p className="home-link-subtle">{share.toFixed(1)}%</p>
                       </div>
                     </div>
-                    <div className="mt-2 h-2 rounded-full bg-slate-200 dark:bg-slate-800">
-                      <div className="h-2 rounded-full bg-sky-500" style={{ width: `${share}%` }} />
+                    <div className="home-progress-track">
+                      <div className="home-progress-fill home-progress-fill--sky" style={{ width: `${share}%` }} />
                     </div>
                   </Link>
                 );
               })}
             </div>
           </div>
+          </div>
 
-          <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h2 className="text-xl font-semibold">Activos por portfolio</h2>
-            <div className="mt-5 space-y-4">
+          <div className="card card--panel home-section">
+            <div className="card-header">
+              <h2 className="card-title">Activos por portfolio</h2>
+            </div>
+            <div className="card-content home-section-content">
+              <div className="home-list home-list--spaced">
               {portfolioDistribution.map(({ portfolio, performance }) => (
                 <Link
                   key={portfolio.id}
                   href={`/portfolios/${portfolio.id}`}
-                  className="block w-full cursor-pointer rounded-2xl border border-slate-200/70 bg-slate-50 p-4 transition hover:border-sky-300 hover:bg-slate-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:border-sky-600/70 dark:hover:bg-slate-900/70"
+                  className="home-link-card home-link-card--dense"
                 >
-                  <p className="font-semibold">{portfolio.name}</p>
-                  <div className="mt-3 space-y-2">
+                  <p className="home-link-title">{portfolio.name}</p>
+                  <div className="home-assets-breakdown">
                     {performance.assetTypeBreakdown.length ? (
                       performance.assetTypeBreakdown.map((item) => {
                         const pct = performance.totalMarketValue > 0
@@ -218,42 +225,46 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
                           : 0;
 
                         return (
-                          <div key={item.type}>
-                            <div className="flex items-center justify-between text-sm">
+                          <div key={item.type} className="home-assets-row">
+                            <div className="home-assets-row-top">
                               <span>{assetTypeLabels[item.type]}</span>
-                              <span className="text-slate-500">{pct.toFixed(1)}%</span>
+                              <span className="home-link-subtle">{pct.toFixed(1)}%</span>
                             </div>
-                            <div className="mt-1 h-2 rounded-full bg-slate-200 dark:bg-slate-800">
-                              <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                            <div className="home-progress-track">
+                              <div className="home-progress-fill home-progress-fill--emerald" style={{ width: `${pct}%` }} />
                             </div>
                           </div>
                         );
                       })
                     ) : (
-                      <p className="text-sm text-slate-500">Sin posiciones abiertas.</p>
+                      <p className="home-muted-text">Sin posiciones abiertas.</p>
                     )}
                   </div>
                 </Link>
               ))}
             </div>
           </div>
+          </div>
 
-          <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h2 className="text-xl font-semibold">Ganancias por portfolio</h2>
-            <div className="mt-5 space-y-3">
+          <div className="card card--panel home-section">
+            <div className="card-header">
+              <h2 className="card-title">Ganancias por portfolio</h2>
+            </div>
+            <div className="card-content home-section-content">
+              <div className="home-list">
               {portfolioGainsRanking.map(({ portfolio, performance }) => (
                 <Link
                   key={portfolio.id}
                   href={`/portfolios/${portfolio.id}`}
-                  className="flex w-full cursor-pointer flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 p-3 transition hover:border-sky-300 hover:bg-slate-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-800 dark:bg-slate-950/70 dark:hover:border-sky-600/70 dark:hover:bg-slate-900/70"
+                  className="home-link-card home-link-card--row"
                 >
-                  <p className="font-semibold">{portfolio.name}</p>
-                  <div className="text-right">
-                    <p className={`font-semibold ${performance.totalPnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                  <p className="home-link-title">{portfolio.name}</p>
+                  <div className="home-link-right">
+                    <p className={`home-link-value ${performance.totalPnl >= 0 ? "home-value-positive" : "home-value-negative"}`}>
                       {performance.totalPnl >= 0 ? "+" : ""}
                       {formatCurrency(performance.totalPnl)}
                     </p>
-                    <p className={`text-xs ${performance.totalPnlPct >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    <p className={`home-link-subtle ${performance.totalPnlPct >= 0 ? "home-value-positive" : "home-value-negative"}`}>
                       {formatPercent(performance.totalPnlPct)}
                     </p>
                   </div>
@@ -261,19 +272,24 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
               ))}
             </div>
           </div>
+          </div>
 
-          <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h2 className="text-xl font-semibold">Ganancias totales</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
-                <p className="text-sm text-slate-500">Costo total invertido</p>
-                <p className="mt-1 text-xl font-semibold">{formatCurrency(totalCostBasis)}</p>
+          <div className="card card--panel home-section">
+            <div className="card-header">
+              <h2 className="card-title">Ganancias totales</h2>
+            </div>
+            <div className="card-content home-section-content">
+              <div className="home-totals-grid">
+              <div className="card-item home-total-card">
+                <p className="home-total-label">Costo total invertido</p>
+                <p className="home-total-value">{formatCurrency(totalCostBasis)}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200/70 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
-                <p className="text-sm text-slate-500">Valor actual consolidado</p>
-                <p className="mt-1 text-xl font-semibold">{formatCurrency(totalMarketValue)}</p>
+              <div className="card-item home-total-card">
+                <p className="home-total-label">Valor actual consolidado</p>
+                <p className="home-total-value">{formatCurrency(totalMarketValue)}</p>
               </div>
             </div>
+          </div>
           </div>
         </>
       )}
@@ -293,12 +309,14 @@ export default async function HomePage() {
   const homeDataPromise = getHomeViewData(session.userId);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <div className="rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
-          <p className="text-sm font-medium uppercase tracking-[0.24em] text-sky-600">Home</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Resumen global</h1>
-        </div>
+    <main className="page">
+      <section className="page-container home-page">
+        <header className="card card-header">
+          <div>
+            <p className="eyebrow">Home</p>
+            <h1 className="card-title card-title--page">Resumen global</h1>
+          </div>
+        </header>
         <Suspense fallback={<HomeFallback />}>
           <HomeStreamedContent dataPromise={homeDataPromise} />
         </Suspense>

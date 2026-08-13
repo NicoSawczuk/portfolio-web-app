@@ -238,23 +238,32 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
   }, [assetsPerPage, boundedCurrentPage, filteredAssets]);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:py-10">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <div className="flex flex-col gap-3 rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:gap-4 sm:p-8 sm:flex-row sm:items-end sm:justify-between">
+    <main className="page">
+      <section className="page-container">
+        <header className="card card-header">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.24em] text-sky-600">Módulo</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Activos</h1>
+            <p className="eyebrow">Módulo</p>
+            <h1 className="card-title card-title--page">Activos</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="header-actions">
             <button
               type="button"
               onClick={handleRefreshQuotes}
               disabled={refreshingQuotes}
               aria-label="Refrescar cotizaciones"
               title="Refrescar cotizaciones"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 sm:h-11 sm:w-11 sm:rounded-2xl"
+              className="button button-secondary header-action-button"
             >
-              <svg viewBox="0 0 24 24" className={`h-4 w-4 sm:h-5 sm:w-5 ${refreshingQuotes ? "animate-spin" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                className={`header-action-icon ${refreshingQuotes ? "spin" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M21 12a9 9 0 1 1-2.64-6.36" />
                 <path d="M21 3v6h-6" />
               </svg>
@@ -264,93 +273,115 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
               onClick={() => openAssetEditor()}
               aria-label="Agregar activo"
               title="Agregar activo"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white transition hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-500 sm:h-11 sm:w-11 sm:rounded-2xl"
+              className="button button-primary header-action-button"
             >
-              <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                className="header-action-icon"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M12 5v14" />
                 <path d="M5 12h14" />
               </svg>
             </button>
           </div>
-        </div>
+        </header>
 
-        {error ? (
-          <div className="rounded-2xl border border-rose-200/80 bg-rose-50/80 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950/70 dark:text-rose-200">
-            {error}
-          </div>
-        ) : null}
+        {error ? <div className="alert-error">{error}</div> : null}
 
-        <div className="rounded-[28px] border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Activos creados</h2>
-              </div>
-              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                <div className="relative flex-1 sm:max-w-[220px]">
-                  <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.3-4.3" />
-                  </svg>
-                  <input
-                    value={searchQuery}
-                    onChange={(event) => {
-                      setSearchQuery(event.target.value);
-                      setCurrentPage(1);
-                    }}
-                    placeholder="Buscar"
-                    className="h-8 w-full rounded-lg border border-slate-300 bg-slate-50 pl-8 pr-2 text-xs text-slate-700 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-sky-400 sm:h-9 sm:rounded-xl sm:pr-3 sm:text-sm"
-                  />
-                </div>
-                <select
-                  value={assetsPerPage}
+        <div className="card card--panel">
+          <div className="card-header assets-panel-header">
+            <div>
+              <h2 className="card-title">Activos creados</h2>
+            </div>
+            <div className="assets-toolbar">
+              <div className="assets-search">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="assets-search-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input
+                  value={searchQuery}
                   onChange={(event) => {
-                    setAssetsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100);
+                    setSearchQuery(event.target.value);
                     setCurrentPage(1);
                   }}
-                  className="h-8 rounded-lg border border-slate-300 bg-slate-50 px-2 text-xs text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-9 sm:rounded-xl sm:px-3 sm:text-sm"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
+                  placeholder="Buscar"
+                  className="control assets-search-control"
+                />
               </div>
+              <select
+                value={assetsPerPage}
+                onChange={(event) => {
+                  setAssetsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100);
+                  setCurrentPage(1);
+                }}
+                className="control assets-page-size"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
             </div>
+          </div>
 
-            <div className="mt-6 divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="card-content">
+            <div className="assets-list">
               {filteredAssets.length ? (
                 paginatedAssets.map((asset) => (
-                  <div key={asset.id} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:gap-3 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div key={asset.id} className="assets-row">
                     <div>
-                      <p className="font-semibold" title={asset.name}>{asset.symbol}</p>
+                      <p className="assets-symbol" title={asset.name}>
+                        {asset.symbol}
+                      </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      <div className="flex flex-col items-start gap-1">
+                    <div className="assets-row-meta">
+                      <div className="assets-quote">
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-medium ${
-                            asset.priceSource === "live"
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                              : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                          className={`assets-badge ${
+                            asset.priceSource === "live" ? "assets-badge--live" : "assets-badge--local"
                           }`}
                         >
                           {asset.priceSource === "live" ? "Cotización en vivo" : "Precio local"}
                         </span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {getQuoteCheckedLabel(asset)}
-                        </span>
+                        <span className="assets-quote-time">{getQuoteCheckedLabel(asset)}</span>
                       </div>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:px-3 sm:py-1 sm:text-xs">
+                      <span className="assets-type">
                         {assetTypes.find((item) => item.value === asset.type)?.label}
                       </span>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{formatPrice(asset.price)}</span>
+                      <span className="assets-price">{formatPrice(asset.price)}</span>
                       <button
                         type="button"
                         onClick={() => openAssetEditor(asset)}
                         aria-label={`Editar ${asset.symbol}`}
                         title={`Editar ${asset.symbol}`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 text-sky-600 transition hover:bg-slate-50 hover:text-sky-700 dark:border-slate-700 dark:text-sky-400 dark:hover:bg-slate-800 sm:h-8 sm:w-8 sm:rounded-xl"
+                        className="button button-secondary assets-row-action"
                       >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="assets-icon"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
                           <path d="M12 20h9" />
                           <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
                         </svg>
@@ -360,9 +391,18 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                         onClick={() => handleDeleteAsset(asset.id)}
                         aria-label={`Eliminar ${asset.symbol}`}
                         title={`Eliminar ${asset.symbol}`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-300 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 dark:border-rose-700/60 dark:text-rose-400 dark:hover:bg-rose-950/50 sm:h-8 sm:w-8 sm:rounded-xl"
+                        className="button button-secondary assets-row-action assets-row-action-delete"
                       >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="assets-icon"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
                           <path d="M3 6h18" />
                           <path d="M8 6V4h8v2" />
                           <path d="M19 6l-1 14H6L5 6" />
@@ -374,23 +414,21 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                   </div>
                 ))
               ) : (
-                <div className="py-4 text-sm text-slate-500 dark:text-slate-400">
-                  No hay activos que coincidan con la búsqueda.
-                </div>
+                <div className="assets-empty">No hay activos que coincidan con la búsqueda.</div>
               )}
             </div>
 
             {filteredAssets.length > 0 ? (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 sm:mt-4 sm:gap-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+              <div className="assets-pagination">
+                <p className="assets-pagination-text">
                   Página {boundedCurrentPage} de {totalPages} ({filteredAssets.length} activos)
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="assets-pagination-actions">
                   <button
                     type="button"
                     onClick={() => setCurrentPage((value) => Math.max(1, Math.min(value, totalPages) - 1))}
                     disabled={boundedCurrentPage === 1}
-                    className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className="button button-secondary assets-pagination-button"
                   >
                     Anterior
                   </button>
@@ -398,61 +436,74 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                     type="button"
                     onClick={() => setCurrentPage((value) => Math.min(totalPages, Math.min(value, totalPages) + 1))}
                     disabled={boundedCurrentPage >= totalPages}
-                    className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className="button button-secondary assets-pagination-button"
                   >
                     Siguiente
                   </button>
                 </div>
               </div>
             ) : null}
+          </div>
         </div>
-      </div>
+      </section>
 
       {isModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6">
-          <div className="w-full max-w-xl rounded-[28px] border border-slate-200/70 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-start justify-between gap-3">
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-header">
               <div>
-                <h3 className="text-xl font-semibold">{editingAssetId ? "Editar activo" : "Crear activo"}</h3>
+                <h3 className="modal-title">
+                  {editingAssetId ? "Editar activo" : "Crear activo"}
+                </h3>
               </div>
               <button
                 type="button"
                 onClick={closeAssetModal}
-                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                aria-label="Cerrar"
+                className="modal-close"
               >
                 ✕
               </button>
             </div>
 
-            <div className="mt-6 space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+            <div className="modal-form">
+              <div className="modal-form-grid">
+                <label className="modal-field">
                   Símbolo
                   <input
                     value={assetForm.symbol}
-                    onChange={(event) => setAssetForm((current) => ({ ...current, symbol: event.target.value }))}
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                    onChange={(event) =>
+                      setAssetForm((current) => ({ ...current, symbol: event.target.value }))
+                    }
+                    className="control modal-field-input"
                     placeholder="AAPL"
                   />
                 </label>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label className="modal-field">
                   Nombre
                   <input
                     value={assetForm.name}
-                    onChange={(event) => setAssetForm((current) => ({ ...current, name: event.target.value }))}
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                    onChange={(event) =>
+                      setAssetForm((current) => ({ ...current, name: event.target.value }))
+                    }
+                    className="control modal-field-input"
                     placeholder="Apple"
                   />
                 </label>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <div className="modal-form-grid">
+                <label className="modal-field">
                   Tipo
                   <select
                     value={assetForm.type}
-                    onChange={(event) => setAssetForm((current) => ({ ...current, type: event.target.value as Asset["type"] }))}
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                    onChange={(event) =>
+                      setAssetForm((current) => ({
+                        ...current,
+                        type: event.target.value as Asset["type"],
+                      }))
+                    }
+                    className="control modal-field-input"
                   >
                     {assetTypes.map((item) => (
                       <option key={item.value} value={item.value}>
@@ -461,38 +512,42 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                     ))}
                   </select>
                 </label>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                <label className="modal-field">
                   ID partner (Cripto)
                   <input
                     type="number"
                     value={assetForm.id_partner}
-                    onChange={(event) => setAssetForm((current) => ({ ...current, id_partner: event.target.value }))}
+                    onChange={(event) =>
+                      setAssetForm((current) => ({ ...current, id_partner: event.target.value }))
+                    }
                     disabled={assetForm.type !== "crypto"}
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                    className="control modal-field-input"
                     placeholder="1"
                   />
                 </label>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <div className="modal-form-grid">
+                <label className="modal-field">
                   Precio actual
                   <input
                     type="number"
                     value={assetForm.price}
-                    onChange={(event) => setAssetForm((current) => ({ ...current, price: event.target.value }))}
-                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400"
+                    onChange={(event) =>
+                      setAssetForm((current) => ({ ...current, price: event.target.value }))
+                    }
+                    className="control modal-field-input"
                     placeholder="0"
                   />
                 </label>
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
+            <div className="modal-actions">
               <button
                 type="button"
                 onClick={closeAssetModal}
-                className="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="button button-secondary modal-button"
               >
                 Cancelar
               </button>
@@ -500,7 +555,7 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                 type="button"
                 onClick={handleSaveAsset}
                 disabled={saving}
-                className="rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-sky-600 dark:hover:bg-sky-500"
+                className="button button-primary modal-button"
               >
                 {saving ? "Guardando..." : editingAssetId ? "Guardar cambios" : "Agregar activo"}
               </button>
