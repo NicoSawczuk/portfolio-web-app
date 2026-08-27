@@ -1,16 +1,17 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { notFound } from "next/navigation";
-import PortfolioV3MainClient from "@/components/PortfolioV3MainClient";
+import { notFound, redirect } from "next/navigation";
 import { readAssets } from "@/lib/asset-db";
 import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { readPortfolioById } from "@/lib/portfolio-db";
+import PortfolioV3TransactionsPageClient from "@/components/PortfolioV3TransactionsPageClient";
 
-interface PortfolioDetailPageProps {
+export const dynamic = "force-dynamic";
+
+interface PortfolioTransactionsPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function PortfolioDetailPage({ params }: PortfolioDetailPageProps) {
+export default async function PortfolioTransactionsPage({ params }: PortfolioTransactionsPageProps) {
   const { id } = await params;
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
@@ -26,6 +27,5 @@ export default async function PortfolioDetailPage({ params }: PortfolioDetailPag
     notFound();
   }
 
-  return <PortfolioV3MainClient portfolioId={id} initialPortfolio={portfolio} initialAssets={assets} />;
+  return <PortfolioV3TransactionsPageClient portfolioId={id} initialPortfolio={portfolio} initialAssets={assets} />;
 }
-
