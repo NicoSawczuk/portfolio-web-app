@@ -115,7 +115,7 @@ export default function PortfolioV3AssetDetailClient({
                   <p className="mt-1 text-sm text-slate-100">{formatCurrencyByVisibility(openPosition.currentPrice)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Precio promedio de compra</p>
+                  <p className="text-xs text-slate-400">Precio promedio</p>
                   <p className="mt-1 text-sm text-slate-100">{formatCurrencyByVisibility(openPosition.avgBuyPrice)}</p>
                 </div>
                 <div>
