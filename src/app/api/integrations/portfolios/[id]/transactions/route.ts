@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { readAssets } from "@/lib/asset-db";
+import { readAssetById } from "@/lib/asset-db";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
 import type { Transaction, TransactionType } from "@/lib/portfolio";
 
@@ -146,8 +146,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const assetId = body.assetId.trim();
-    const globalAssets = await readAssets();
-    const assetMetadata = globalAssets.find((asset) => asset.id === assetId);
+    const assetMetadata = await readAssetById(assetId);
 
     if (!assetMetadata) {
       return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
@@ -155,7 +154,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     let portfolioAsset = portfolio.assets.find((asset) => asset.id === assetId);
     if (!portfolioAsset) {
-      portfolioAsset = { ...assetMetadata, transactions: [] };
+      portfolioAsset = { ...assetMetadata };
       portfolio.assets = [portfolioAsset, ...portfolio.assets];
     }
 
@@ -169,7 +168,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     };
 
     portfolio.transactions = [transaction, ...portfolio.transactions];
-    portfolioAsset.transactions = [transaction, ...portfolioAsset.transactions];
     portfolio.assets = portfolio.assets.map((asset) => (asset.id === assetId ? portfolioAsset : asset));
 
     const updatedPortfolio = await replacePortfolioById(id, portfolio);

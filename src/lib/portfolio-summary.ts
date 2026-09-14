@@ -81,6 +81,60 @@ function applyTransactionToHoldings(
   holdings.set(transaction.assetId, existing);
 }
 
+interface CashMovement {
+  balanceDelta: number;
+  contributionDelta: number;
+}
+
+function getCashMovement(transaction: Transaction): CashMovement {
+  const amount = Number(transaction.price ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { balanceDelta: 0, contributionDelta: 0 };
+  }
+
+  if (transaction.type === "cash_in") {
+    return { balanceDelta: amount, contributionDelta: amount };
+  }
+
+  if (transaction.type === "cash_out") {
+    return { balanceDelta: -amount, contributionDelta: -amount };
+  }
+
+  if (transaction.type === "buy" || transaction.type === "sell") {
+    const quantity = Number(transaction.quantity ?? 0);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return { balanceDelta: 0, contributionDelta: 0 };
+    }
+
+    const tradeAmount = quantity * amount;
+    return { balanceDelta: transaction.type === "buy" ? -tradeAmount : tradeAmount, contributionDelta: 0 };
+  }
+
+  return { balanceDelta: 0, contributionDelta: 0 };
+}
+
+export interface CashTotals {
+  balance: number;
+  netContributions: number;
+}
+
+export function calculateCashTotals(portfolio: Portfolio | null | undefined): CashTotals {
+  let balance = 0;
+  let netContributions = 0;
+
+  if (!portfolio || !portfolio.managesCash) {
+    return { balance, netContributions };
+  }
+
+  for (const transaction of portfolio.transactions ?? []) {
+    const movement = getCashMovement(transaction);
+    balance += movement.balanceDelta;
+    netContributions += movement.contributionDelta;
+  }
+
+  return { balance, netContributions };
+}
+
 export function calculatePortfolioPerformance(
   portfolio: Portfolio | null | undefined,
   assets: Asset[]
@@ -93,43 +147,10 @@ export function calculatePortfolioPerformance(
   const assetById = new Map(assets.map((asset) => [asset.id, asset]));
   const sortedTransactions = [...(portfolio.transactions ?? [])].sort((a, b) => a.date.localeCompare(b.date));
   const managesCash = Boolean(portfolio.managesCash);
-  let cashBalance = 0;
-  let cashNetContributions = 0;
-
-  const getCashMovement = (transaction: Transaction) => {
-    const amount = Number(transaction.price ?? 0);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return { balanceDelta: 0, contributionDelta: 0 };
-    }
-
-    if (transaction.type === "cash_in") {
-      return { balanceDelta: amount, contributionDelta: amount };
-    }
-
-    if (transaction.type === "cash_out") {
-      return { balanceDelta: -amount, contributionDelta: -amount };
-    }
-
-    if (transaction.type === "buy" || transaction.type === "sell") {
-      const quantity = Number(transaction.quantity ?? 0);
-      if (!Number.isFinite(quantity) || quantity <= 0) {
-        return { balanceDelta: 0, contributionDelta: 0 };
-      }
-
-      const tradeAmount = quantity * amount;
-      return { balanceDelta: transaction.type === "buy" ? -tradeAmount : tradeAmount, contributionDelta: 0 };
-    }
-
-    return { balanceDelta: 0, contributionDelta: 0 };
-  };
+  const { balance: cashBalance, netContributions: cashNetContributions } = calculateCashTotals(portfolio);
 
   sortedTransactions.forEach((transaction) => {
     applyTransactionToHoldings(holdings, transaction);
-    if (managesCash) {
-      const movement = getCashMovement(transaction);
-      cashBalance += movement.balanceDelta;
-      cashNetContributions += movement.contributionDelta;
-    }
   });
 
   const holdingsList = Array.from(holdings.values())

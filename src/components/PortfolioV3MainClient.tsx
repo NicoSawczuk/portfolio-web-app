@@ -154,14 +154,13 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
             {activeTab === "open" ? (
               filteredOpenPositions.length ? (
                 filteredOpenPositions.map((position, index) => {
-                  const color = getAssetColor(position.assetId, index);
+                  const isCashPosition = position.type === "cash";
+                  const color = isCashPosition ? "#10b981" : getAssetColor(position.assetId, index);
+                  const cardClassName =
+                    "block rounded-2xl border border-slate-700/80 bg-[#111c30] p-3 transition hover:border-slate-500/80 hover:bg-[#162238]";
 
-                  return (
-                    <Link
-                      key={position.assetId}
-                      href={`/portfolios/${portfolioId}/assets/${encodeURIComponent(position.symbol)}`}
-                      className="block rounded-2xl border border-slate-700/80 bg-[#111c30] p-3 transition hover:border-slate-500/80 hover:bg-[#162238]"
-                    >
+                  const cardContent = (
+                    <>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 pr-1">
                           <div className="flex items-center gap-2">
@@ -207,10 +206,30 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
                           <p className="text-slate-400">% del portfolio</p>
                           <p className="mt-0.5 text-slate-100">{showAmounts ? formatUnsignedPercent(position.sharePct) : "••••"}</p>
                         </div>
-                        <div className="flex items-end justify-end text-slate-400">
-                          <span className="text-xl leading-none">›</span>
-                        </div>
+                        {isCashPosition ? null : (
+                          <div className="flex items-end justify-end text-slate-400">
+                            <span className="text-xl leading-none">›</span>
+                          </div>
+                        )}
                       </div>
+                    </>
+                  );
+
+                  if (isCashPosition) {
+                    return (
+                      <div key={position.assetId} className={cardClassName}>
+                        {cardContent}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={position.assetId}
+                      href={`/portfolios/${portfolioId}/assets/${encodeURIComponent(position.symbol)}`}
+                      className={cardClassName}
+                    >
+                      {cardContent}
                     </Link>
                   );
                 })

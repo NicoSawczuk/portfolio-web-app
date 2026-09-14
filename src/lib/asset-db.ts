@@ -21,16 +21,27 @@ async function getAssetsCollection() {
 }
 
 function normalizeAsset(asset: Asset): Asset {
+  // Legacy documents may still carry a per-asset `transactions` array.
+  // It is not part of the Asset type anymore and is stripped here.
+  const { transactions: _legacyTransactions, ...rest } = asset as Asset & { transactions?: unknown };
+  void _legacyTransactions;
   return {
-    ...asset,
-    id: asset.id || new ObjectId().toHexString(),
-    transactions: asset.transactions ?? [],
+    ...rest,
+    id: rest.id || new ObjectId().toHexString(),
   };
 }
 
-export async function readAssets(): Promise<Asset[]> {
+interface ReadAssetsOptions {
+  // Portfolio views only need id/symbol/name/type/price; skips the rest of the asset payload.
+  minimal?: boolean;
+}
+
+export async function readAssets(options: ReadAssetsOptions = {}): Promise<Asset[]> {
   const collection = await getAssetsCollection();
-  const assets = await collection.find({}, { projection: { _id: 0 } }).sort({ _id: -1 }).toArray();
+  const projection = options.minimal
+    ? { _id: 0, id: 1, symbol: 1, name: 1, type: 1, price: 1 }
+    : { _id: 0 };
+  const assets = await collection.find({}, { projection }).sort({ _id: -1 }).toArray();
 
   return assets.map(normalizeAsset);
 }

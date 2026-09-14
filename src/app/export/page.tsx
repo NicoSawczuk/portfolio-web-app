@@ -17,7 +17,7 @@ export default async function ExportPage() {
     redirect("/login");
   }
 
-  const [portfolios, assets] = await Promise.all([readPortfolios(session.userId), readAssets()]);
+  const [portfolios, assets] = await Promise.all([readPortfolios(session.userId), readAssets({ minimal: true })]);
 
   return <TransactionsExportPanel initialPortfolios={portfolios} initialAssets={assets} />;
 }

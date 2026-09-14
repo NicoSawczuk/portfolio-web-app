@@ -20,7 +20,7 @@ export default async function PortfolioDetailPage({ params }: PortfolioDetailPag
     redirect("/login");
   }
 
-  const [portfolio, assets] = await Promise.all([readPortfolioById(id, session.userId), readAssets()]);
+  const [portfolio, assets] = await Promise.all([readPortfolioById(id, session.userId), readAssets({ minimal: true })]);
 
   if (!portfolio) {
     notFound();

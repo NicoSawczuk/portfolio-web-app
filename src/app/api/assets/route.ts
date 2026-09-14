@@ -74,7 +74,6 @@ export async function POST(request: Request) {
     type,
     id_partner: normalizedPartnerId,
     price: Number(price ?? 0),
-    transactions: [],
   };
 
   await insertAsset(newAsset);

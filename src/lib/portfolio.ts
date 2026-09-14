@@ -24,7 +24,6 @@ export interface Asset {
   priceSource?: "live" | "local";
   quoteCheckedAt?: string;
   quoteUpdatedAt?: string;
-  transactions: Transaction[];
 }
 
 export interface Portfolio {

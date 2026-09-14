@@ -151,7 +151,6 @@ for (const trade of trades) {
         name: inferAssetName(symbol),
         type: inferAssetType(symbol),
         price: 0,
-        transactions: [],
       };
       assets.unshift(asset);
       assetsBySymbol.set(symbol, asset);
@@ -164,7 +163,7 @@ for (const trade of trades) {
 
     const existingPortfolioAsset = portfolio.assets.find((item) => String(item.symbol).toUpperCase() === symbol);
     if (!existingPortfolioAsset) {
-      portfolio.assets.unshift({ ...asset, transactions: [] });
+      portfolio.assets.unshift({ ...asset });
     }
   }
 
@@ -200,25 +199,13 @@ for (const trade of trades) {
   }
 
   portfolio.transactions.unshift(tx);
-
-  if (!isCash) {
-    const portfolioAsset = portfolio.assets.find((item) => item.id === asset.id);
-    if (portfolioAsset) {
-      portfolioAsset.transactions = portfolioAsset.transactions ?? [];
-      portfolioAsset.transactions.unshift(tx);
-    }
-  }
-
   importedCount += 1;
   perPortfolioImported.set(portfolio.name, (perPortfolioImported.get(portfolio.name) ?? 0) + 1);
 }
 
 for (const portfolio of portfolios) {
   portfolio.transactions = [...(portfolio.transactions ?? [])].sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  portfolio.assets = (portfolio.assets ?? []).map((asset) => ({
-    ...asset,
-    transactions: [...(asset.transactions ?? [])].sort((a, b) => String(b.date).localeCompare(String(a.date))),
-  }));
+  portfolio.assets = portfolio.assets ?? [];
 }
 
 await Promise.all([

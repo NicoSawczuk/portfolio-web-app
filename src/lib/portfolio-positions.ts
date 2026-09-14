@@ -1,4 +1,5 @@
 import type { Asset, AssetType, Portfolio, Transaction } from "@/lib/portfolio";
+import { calculateCashTotals } from "@/lib/portfolio-summary";
 
 export interface OpenPositionSummary {
   assetId: string;
@@ -186,6 +187,27 @@ export function buildPortfolioPositionsAnalytics(
 
       return a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
     });
+
+  if (Boolean(portfolio.managesCash)) {
+    const { balance: cashBalance } = calculateCashTotals(portfolio);
+    const normalizedCashBalance = Math.abs(cashBalance) < POSITION_EPSILON ? 0 : cashBalance;
+    openPositions.unshift({
+      assetId: `cash:${portfolio.id}`,
+      symbol: "USD",
+      name: "Efectivo",
+      type: "cash",
+      quantity: normalizedCashBalance,
+      avgBuyPrice: 1,
+      currentPrice: 1,
+      investedValue: normalizedCashBalance,
+      marketValue: normalizedCashBalance,
+      pnl: 0,
+      pnlPct: 0,
+      sharePct: 0,
+      firstBuyDate: null,
+      lastBuyDate: null,
+    });
+  }
 
   const totalOpenMarketValue = openPositions.reduce((sum, item) => sum + item.marketValue, 0);
 

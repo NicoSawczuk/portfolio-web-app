@@ -66,7 +66,7 @@ interface HomeViewData {
 }
 
 async function getHomeViewData(userId: string): Promise<HomeViewData> {
-  const [portfolios, assets] = await Promise.all([readPortfolios(userId), readAssets()]);
+  const [portfolios, assets] = await Promise.all([readPortfolios(userId), readAssets({ minimal: true })]);
 
   const portfolioPerformances = portfolios
     .map((portfolio) => {

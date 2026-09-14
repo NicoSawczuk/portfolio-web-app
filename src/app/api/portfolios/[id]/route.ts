@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
-import { readAssets } from "@/lib/asset-db";
+import { readAssetById } from "@/lib/asset-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import type { Asset, Transaction, TransactionType } from "@/lib/portfolio";
 
@@ -73,8 +73,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     };
 
     if (type === "buy" || type === "sell") {
-      const globalAssets = await readAssets();
-      const assetMetadata = globalAssets.find((item) => item.id === assetId);
+      const assetMetadata = assetId ? await readAssetById(assetId) : null;
 
       if (!assetMetadata) {
         return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
@@ -82,7 +81,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
       let portfolioAsset = portfolio.assets.find((item) => item.id === assetId);
       if (!portfolioAsset) {
-        portfolioAsset = { ...assetMetadata, transactions: [] };
+        portfolioAsset = { ...assetMetadata };
         portfolio.assets = [portfolioAsset, ...portfolio.assets];
       }
 
@@ -95,7 +94,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         quantity: Number(quantity ?? 0),
       };
 
-      portfolioAsset.transactions = [transactionWithAsset, ...portfolioAsset.transactions];
       portfolio.transactions = [transactionWithAsset, ...portfolio.transactions];
       portfolio.assets = portfolio.assets.map((item) => (item.id === assetId ? portfolioAsset : item));
       const updatedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
@@ -132,7 +130,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     name: name.trim(),
     type,
     price: Number(price ?? 0),
-    transactions: [],
   };
 
   portfolio.assets = [nextAsset, ...portfolio.assets];
@@ -229,14 +226,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Transacción no encontrada." }, { status: 404 });
   }
 
-  portfolio.assets = portfolio.assets.map((asset) => ({
-    ...asset,
-    transactions: asset.transactions.filter((transaction) => transaction.id !== transactionId),
-  }));
-
   if (type === "buy" || type === "sell") {
-    const globalAssets = await readAssets();
-    const assetMetadata = globalAssets.find((item) => item.id === assetId);
+    const assetMetadata = assetId ? await readAssetById(assetId) : null;
 
     if (!assetMetadata) {
       return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
@@ -244,7 +235,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     let portfolioAsset = portfolio.assets.find((item) => item.id === assetId);
     if (!portfolioAsset) {
-      portfolioAsset = { ...assetMetadata, transactions: [] };
+      portfolioAsset = { ...assetMetadata };
       portfolio.assets = [portfolioAsset, ...portfolio.assets];
     }
 
@@ -264,7 +255,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     portfolio.transactions = portfolio.transactions.map((transaction) =>
       transaction.id === transactionId ? updatedTransaction : transaction
     );
-    portfolioAsset.transactions = [updatedTransaction, ...portfolioAsset.transactions];
     portfolio.assets = portfolio.assets.map((item) => (item.id === assetId ? portfolioAsset : item));
     const savedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
     if (!savedPortfolio) {
@@ -344,10 +334,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   }
 
   portfolio.transactions = portfolio.transactions.filter((transaction) => transaction.id !== transactionId);
-  portfolio.assets = portfolio.assets.map((asset) => ({
-    ...asset,
-    transactions: asset.transactions.filter((transaction) => transaction.id !== transactionId),
-  }));
 
   const savedPortfolio = await replacePortfolioById(id, portfolio, session.userId);
   if (!savedPortfolio) {

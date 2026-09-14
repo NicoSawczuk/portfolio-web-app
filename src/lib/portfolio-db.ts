@@ -1,6 +1,6 @@
 import { Collection, ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { Portfolio } from "@/lib/portfolio";
+import { Asset, Portfolio } from "@/lib/portfolio";
 
 const collectionName = "portfolios";
 
@@ -26,9 +26,17 @@ function normalizePortfolio(portfolio: Portfolio): Portfolio {
     ...portfolio,
     id: portfolio.id || new ObjectId().toHexString(),
     managesCash: Boolean(portfolio.managesCash),
-    assets: portfolio.assets ?? [],
+    assets: (portfolio.assets ?? []).map((asset) => stripLegacyAssetTransactions(asset)),
     transactions: portfolio.transactions ?? [],
   };
+}
+
+// Legacy documents may still carry a per-asset `transactions` array on
+// embedded portfolio assets. It is not part of the Asset type anymore.
+function stripLegacyAssetTransactions(asset: Asset): Asset {
+  const { transactions: _legacyTransactions, ...rest } = asset as Asset & { transactions?: unknown };
+  void _legacyTransactions;
+  return rest;
 }
 
 export async function readPortfolios(ownerUserId?: string): Promise<Portfolio[]> {
