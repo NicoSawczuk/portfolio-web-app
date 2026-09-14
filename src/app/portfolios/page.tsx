@@ -16,7 +16,7 @@ export default async function PortfoliosPage() {
     redirect("/login");
   }
 
-  const [portfolios, assets] = await Promise.all([readPortfolios(session.userId), readAssets()]);
+  const [portfolios, assets] = await Promise.all([readPortfolios(session.userId), readAssets({ minimal: true })]);
 
   return <PortfolioDashboardClient initialPortfolios={portfolios} initialAssets={assets} />;
 }

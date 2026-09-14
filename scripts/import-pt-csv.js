@@ -122,7 +122,6 @@ for (const trade of trades) {
     name: symbol,
     type: inferType(symbol),
     price: 0,
-    transactions: [],
   };
 
   assets.push(newAsset);
@@ -175,7 +174,7 @@ for (const trade of trades) {
   });
 }
 
-// Build per-portfolio asset transactions from the imported transaction list.
+// Build per-portfolio asset snapshots from the imported transaction list.
 for (const portfolio of portfolios) {
   const byAssetId = new Map();
 
@@ -190,11 +189,8 @@ for (const portfolio of portfolios) {
         name: tx.assetName,
         type: tx.assetType,
         price: baseAsset?.price ?? 0,
-        transactions: [],
       });
     }
-
-    byAssetId.get(tx.assetId).transactions.push(tx);
   }
 
   portfolio.assets = Array.from(byAssetId.values());
