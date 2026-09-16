@@ -23,6 +23,13 @@ function isPublicPath(pathname: string) {
     return true;
   }
 
+  // Integraciones externas (ej: n8n) se autentican con x-api-key propia,
+  // no con cookie de sesión. Deben pasar sin sesión para que el handler
+  // valide la API key y responda "No autorizado." si corresponde.
+  if (pathname.startsWith("/api/integrations/")) {
+    return true;
+  }
+
   return false;
 }
 
