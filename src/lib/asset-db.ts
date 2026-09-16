@@ -56,6 +56,31 @@ export async function readAssetById(id: string): Promise<Asset | null> {
   return normalizeAsset(asset);
 }
 
+export async function readAssetBySymbol(symbol: string): Promise<Asset | null> {
+  const normalized = symbol.trim().toUpperCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const collection = await getAssetsCollection();
+  const asset = await collection.findOne({ symbol: normalized }, { projection: { _id: 0 } });
+  if (asset) {
+    return normalizeAsset(asset);
+  }
+
+  // Fallback case-insensitive para documentos legacy con símbolo en minúsculas.
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const fallback = await collection.findOne(
+    { symbol: { $regex: `^${escaped}$`, $options: "i" } },
+    { projection: { _id: 0 } }
+  );
+  if (!fallback) {
+    return null;
+  }
+
+  return normalizeAsset(fallback);
+}
+
 export async function insertAsset(asset: Asset): Promise<Asset> {
   const collection = await getAssetsCollection();
   const normalized = normalizeAsset(asset);

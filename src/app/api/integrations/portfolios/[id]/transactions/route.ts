@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { readAssetById } from "@/lib/asset-db";
+import { readAssetBySymbol } from "@/lib/asset-db";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
 import type { Transaction, TransactionType } from "@/lib/portfolio";
 
@@ -9,7 +9,7 @@ const ALLOWED_TRANSACTION_TYPES: TransactionType[] = ["buy", "sell", "cash_in", 
 
 type CreateTransactionPayload = {
   type?: unknown;
-  assetId?: unknown;
+  symbol?: unknown;
   quantity?: unknown;
   price?: unknown;
   date?: unknown;
@@ -78,16 +78,17 @@ function parseOptionalNotes(value: unknown) {
   return trimmed;
 }
 
+function errorResponse(message: string, status: number) {
+  return NextResponse.json({ ok: false, error: message }, { status });
+}
+
 function unauthorizedResponse() {
-  return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  return errorResponse("No autorizado.", 401);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!PORTFOLIO_TRANSACTIONS_API_KEY) {
-    return NextResponse.json(
-      { error: "Falta configurar PORTFOLIO_TRANSACTIONS_API_KEY en el entorno." },
-      { status: 500 }
-    );
+    return errorResponse("Falta configurar PORTFOLIO_TRANSACTIONS_API_KEY en el entorno.", 500);
   }
 
   const requestApiKey = request.headers.get("x-api-key")?.trim();
@@ -99,32 +100,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     body = (await request.json()) as CreateTransactionPayload;
   } catch {
-    return NextResponse.json({ error: "JSON inválido en el cuerpo de la solicitud." }, { status: 400 });
+    return errorResponse("JSON inválido en el cuerpo de la solicitud.", 400);
   }
 
   const { id } = await params;
   const portfolio = await readPortfolioById(id);
 
   if (!portfolio) {
-    return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+    return errorResponse("Portfolio no encontrado.", 404);
   }
 
   if (!isTransactionType(body.type)) {
-    return NextResponse.json({ error: "El tipo de transacción es inválido." }, { status: 400 });
+    return errorResponse("El tipo de transacción es inválido.", 400);
   }
 
   if (typeof body.date !== "string" || !isValidDateInputValue(body.date)) {
-    return NextResponse.json({ error: "La fecha es obligatoria y debe tener formato YYYY-MM-DD." }, { status: 400 });
+    return errorResponse("La fecha es obligatoria y debe tener formato YYYY-MM-DD.", 400);
   }
 
   const price = parsePositiveNumber(body.price);
   if (!price) {
-    return NextResponse.json({ error: "El precio/monto debe ser un número mayor a cero." }, { status: 400 });
+    return errorResponse("El precio/monto debe ser un número mayor a cero.", 400);
   }
 
   const notes = parseOptionalNotes(body.notes);
   if (notes === null) {
-    return NextResponse.json({ error: "Las notas deben ser texto y no superar 1000 caracteres." }, { status: 400 });
+    return errorResponse("Las notas deben ser texto y no superar 1000 caracteres.", 400);
   }
 
   const transactionBase: Transaction = {
@@ -136,22 +137,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   };
 
   if (body.type === "buy" || body.type === "sell") {
-    if (typeof body.assetId !== "string" || !body.assetId.trim()) {
-      return NextResponse.json({ error: "assetId es obligatorio para transacciones buy/sell." }, { status: 400 });
+    if (typeof body.symbol !== "string" || !body.symbol.trim()) {
+      return errorResponse("symbol es obligatorio para transacciones buy/sell (ej: BTC, AAPL, SPY).", 400);
     }
 
     const quantity = parsePositiveNumber(body.quantity);
     if (!quantity) {
-      return NextResponse.json({ error: "La cantidad debe ser un número mayor a cero." }, { status: 400 });
+      return errorResponse("La cantidad debe ser un número mayor a cero.", 400);
     }
 
-    const assetId = body.assetId.trim();
-    const assetMetadata = await readAssetById(assetId);
+    const symbol = body.symbol.trim().toUpperCase();
+    const assetMetadata = await readAssetBySymbol(symbol);
 
     if (!assetMetadata) {
-      return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
+      return errorResponse(`Activo no encontrado para el símbolo "${symbol}".`, 404);
     }
 
+    const assetId = assetMetadata.id;
     let portfolioAsset = portfolio.assets.find((asset) => asset.id === assetId);
     if (!portfolioAsset) {
       portfolioAsset = { ...assetMetadata };
@@ -172,15 +174,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const updatedPortfolio = await replacePortfolioById(id, portfolio);
     if (!updatedPortfolio) {
-      return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+      return errorResponse("Portfolio no encontrado.", 404);
     }
 
-    return NextResponse.json({
-      ok: true,
-      portfolioId: id,
-      transactionId: transaction.id,
-      transaction,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        portfolioId: id,
+        transactionId: transaction.id,
+        transaction,
+      },
+      { status: 201 }
+    );
   }
 
   const transaction: Transaction = {
@@ -195,13 +200,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   portfolio.transactions = [transaction, ...portfolio.transactions];
   const updatedPortfolio = await replacePortfolioById(id, portfolio);
   if (!updatedPortfolio) {
-    return NextResponse.json({ error: "Portfolio no encontrado." }, { status: 404 });
+    return errorResponse("Portfolio no encontrado.", 404);
   }
 
-  return NextResponse.json({
-    ok: true,
-    portfolioId: id,
-    transactionId: transaction.id,
-    transaction,
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      portfolioId: id,
+      transactionId: transaction.id,
+      transaction,
+    },
+    { status: 201 }
+  );
 }
