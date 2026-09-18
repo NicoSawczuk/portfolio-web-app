@@ -258,7 +258,7 @@ Important difference from UI API:
 ## Transactions Export
 
 ```text
-/export page
+/settings page (Configuración; /export redirects here)
   -> readPortfolios(session.userId) + readAssets({ minimal: true })
   -> TransactionsExportPanel (client-side CSV/JSON download)
   -> rows carry portfolio_currency, transaction_currency
@@ -266,6 +266,27 @@ Important difference from UI API:
      asset_currency, asset_price_currency and asset_price_ars
   -> asset_price uses the effective price (price_ars for cedear)
 ```
+
+## Transactions Import
+
+```text
+/settings page (Configuración)
+  -> TransactionsImportPanel (JSON file upload or paste, example + copy + field help)
+  -> JSON shape: { portfolioId, transactions: [{ type, symbol?, quantity?, price, date, notes? }] }
+     - type: buy | sell | cash_in | cash_out
+     - buy/sell require symbol (must exist in assets) + quantity > 0
+     - price > 0 and date YYYY-MM-DD always required; notes optional (<= 1000 chars)
+  -> POST /api/portfolios/import-transactions (session auth, portfolio must belong to user)
+  -> atomic server validation: any row error aborts with 400 + per-row errors
+  -> asset currency must match portfolio currency (same invariant as other transaction APIs)
+  -> missing portfolio assets are added; transactions are prepended
+```
+
+Files:
+
+- `src/app/settings/page.tsx`
+- `src/components/TransactionsImportPanel.tsx`
+- `src/app/api/portfolios/import-transactions/route.ts`
 
 ## Portfolio Valuation
 

@@ -213,15 +213,14 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
   };
 
   return (
-    <main className="page">
-      <section className="page-container">
-        <header className="card card-header">
-          <div>
-            <p className="eyebrow">Exportación</p>
-            <h1 className="card-title card-title--page">Exportar</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="sr-only" htmlFor="export-format">Formato de exportación</label>
+        <div className="card card--panel">
+          <div className="card-header flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="card-title">Exportar transacciones</h2>
+              <p className="card-description">Descargá las transacciones de los portfolios seleccionados.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="sr-only" htmlFor="export-format">Formato de exportación</label>
               <select
                 id="export-format"
                 value={exportFormat}
@@ -232,18 +231,16 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
                 <option value="json">JSON</option>
               </select>
 
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={exporting || rows.length === 0}
-              className="button button-primary inline-flex h-10 items-center justify-center px-4 text-sm font-semibold"
-            >
-              {exporting ? "Exportando..." : "Exportar"}
-            </button>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={exporting || rows.length === 0}
+                className="button button-primary inline-flex h-10 items-center justify-center px-4 text-sm font-semibold"
+              >
+                {exporting ? "Exportando..." : "Exportar"}
+              </button>
+            </div>
           </div>
-        </header>
-
-        <div className="card card--panel">
           {error ? (
             <div className="alert-error">
               {error}
@@ -287,7 +284,5 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
             </div>
           </div>
         </div>
-      </section>
-    </main>
   );
 }
