@@ -30,7 +30,7 @@ Then select the task path below.
 | Performance / metrics | `CALCULATIONS.md` | `src/lib/portfolio-summary.ts`, `src/lib/portfolio-positions.ts` |
 | Dashboard / portfolio UI | `ARCHITECTURE.md`, `WORKFLOWS.md` | `src/app/page.tsx`, `src/components/HomeHeroCard.tsx`, `src/components/PortfolioDashboardClient.tsx`, `src/components/PortfolioV3MainClient.tsx` |
 | Transaction UI | `WORKFLOWS.md`, `DOMAIN.md` | `src/components/AddTransactionButton.tsx`, `src/components/PortfolioTransactionsTable.tsx` |
-| Export | `PROJECT.md`, `WORKFLOWS.md` | `src/app/export/page.tsx`, `src/components/TransactionsExportPanel.tsx` (currency columns: `portfolio_currency`, `transaction_currency`, `asset_currency`, `asset_price_currency`, `asset_price_ars`) |
+| Export / Import (Settings) | `PROJECT.md`, `WORKFLOWS.md` | `src/app/settings/page.tsx` (`/export` redirects there), `src/components/TransactionsExportPanel.tsx` (currency columns: `portfolio_currency`, `transaction_currency`, `asset_currency`, `asset_price_currency`, `asset_price_ars`), `src/components/TransactionsImportPanel.tsx`, `src/app/api/portfolios/import-transactions/route.ts` |
 | API / backend flow | `ARCHITECTURE.md`, `WORKFLOWS.md` | relevant `src/app/api/**` route plus its service/data dependencies |
 | Database / persistence | `DATABASE.md` | relevant `src/lib/*-db.ts`, route/service using it |
 | Cross-cutting change | `ARCHITECTURE.md` + affected domain docs | trace only the changed flow and its consumers |

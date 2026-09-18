@@ -38,7 +38,8 @@ public/logos/          Logo and favicon assets
 | `/portfolios/[id]/assets/[symbol]` | `src/app/portfolios/[id]/assets/[symbol]/page.tsx` | Open position detail by symbol. |
 | `/portfolios/[id]/closed/[assetId]` | `src/app/portfolios/[id]/closed/[assetId]/page.tsx` | Closed position detail by asset id. |
 | `/assets` | `src/app/assets/page.tsx` | Global assets management. |
-| `/export` | `src/app/export/page.tsx` | Transaction export. |
+| `/settings` | `src/app/settings/page.tsx` | Configuración: transaction export + JSON import. |
+| `/export` | `src/app/export/page.tsx` | Legacy redirect to `/settings`. |
 
 Most data pages export `dynamic = "force-dynamic"` to avoid static caching. `src/app/portfolios/[id]/page.tsx` does not explicitly set it, but it calls `cookies()`, so it is request-bound.
 
