@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
 import { readAssetById } from "@/lib/asset-db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { getAssetCurrency, getPortfolioCurrency } from "@/lib/portfolio";
 import type { Asset, Transaction, TransactionType } from "@/lib/portfolio";
 
 function createObjectId() {
@@ -79,6 +80,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
       }
 
+      if (getAssetCurrency(assetMetadata) !== getPortfolioCurrency(portfolio)) {
+        return NextResponse.json(
+          { error: `El activo cotiza en ${getAssetCurrency(assetMetadata)} y el portfolio es en ${getPortfolioCurrency(portfolio)}.` },
+          { status: 400 }
+        );
+      }
+
       let portfolioAsset = portfolio.assets.find((item) => item.id === assetId);
       if (!portfolioAsset) {
         portfolioAsset = { ...assetMetadata };
@@ -113,7 +121,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json(updatedPortfolio);
   }
 
-  const { symbol, name, type, price } = body as { symbol: string; name: string; type: Asset["type"]; price?: number };
+  const { symbol, name, type, price, price_ars } = body as {
+    symbol: string;
+    name: string;
+    type: Asset["type"];
+    price?: number;
+    price_ars?: number;
+  };
 
   if (!symbol?.trim() || !name?.trim()) {
     return NextResponse.json({ error: "El símbolo y el nombre son obligatorios." }, { status: 400 });
@@ -129,7 +143,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     symbol: symbol.trim().toUpperCase(),
     name: name.trim(),
     type,
-    price: Number(price ?? 0),
+    price: type === "cedear" ? 0 : Number(price ?? 0),
+    price_ars: type === "cedear" ? Number(price_ars ?? 0) : undefined,
   };
 
   portfolio.assets = [nextAsset, ...portfolio.assets];
@@ -151,12 +166,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const body = await request.json();
 
   if (body?.kind === "asset") {
-    const { assetId, symbol, name, type, price } = body as {
+    const { assetId, symbol, name, type, price, price_ars } = body as {
       assetId: string;
       symbol: string;
       name: string;
       type: Asset["type"];
       price: number;
+      price_ars?: number;
     };
 
     if (!assetId || !symbol?.trim() || !name?.trim()) {
@@ -170,7 +186,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     portfolio.assets = portfolio.assets.map((asset) =>
       asset.id === assetId
-        ? { ...asset, symbol: symbol.trim().toUpperCase(), name: name.trim(), type, price: Number(price ?? asset.price) }
+        ? {
+            ...asset,
+            symbol: symbol.trim().toUpperCase(),
+            name: name.trim(),
+            type,
+            price: type === "cedear" ? 0 : Number(price ?? asset.price),
+            price_ars: type === "cedear" ? Number(price_ars ?? asset.price_ars ?? 0) : undefined,
+          }
         : asset
     );
 
@@ -231,6 +254,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     if (!assetMetadata) {
       return NextResponse.json({ error: "Activo no encontrado." }, { status: 404 });
+    }
+
+    if (getAssetCurrency(assetMetadata) !== getPortfolioCurrency(portfolio)) {
+      return NextResponse.json(
+        { error: `El activo cotiza en ${getAssetCurrency(assetMetadata)} y el portfolio es en ${getPortfolioCurrency(portfolio)}.` },
+        { status: 400 }
+      );
     }
 
     let portfolioAsset = portfolio.assets.find((item) => item.id === assetId);

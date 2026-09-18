@@ -87,7 +87,7 @@ export default function PortfolioV3ClosedDetailClient({
                 <div>
                   <p className="text-sm text-slate-400">Resultado total</p>
                   <p className={`mt-1 text-xl font-semibold ${closedPosition.realizedPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {formatSignedCurrency(closedPosition.realizedPnl)}
+                    {formatSignedCurrency(closedPosition.realizedPnl, closedPosition.currency)}
                   </p>
                 </div>
                 <div>
@@ -98,7 +98,7 @@ export default function PortfolioV3ClosedDetailClient({
                 </div>
                 <div>
                   <p className="text-sm text-slate-400">Capital invertido</p>
-                  <p className="mt-1 text-xl font-semibold text-white">{formatCurrency(closedPosition.investedCapital)}</p>
+                  <p className="mt-1 text-xl font-semibold text-white">{formatCurrency(closedPosition.investedCapital, closedPosition.currency)}</p>
                 </div>
               </div>
 
@@ -109,11 +109,11 @@ export default function PortfolioV3ClosedDetailClient({
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Precio prom. compra</p>
-                  <p className="mt-1 text-sm text-slate-100">{formatCurrency(closedPosition.avgBuyPrice)}</p>
+                  <p className="mt-1 text-sm text-slate-100">{formatCurrency(closedPosition.avgBuyPrice, closedPosition.currency)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Precio prom. venta</p>
-                  <p className="mt-1 text-sm text-slate-100">{formatCurrency(closedPosition.avgSellPrice)}</p>
+                  <p className="mt-1 text-sm text-slate-100">{formatCurrency(closedPosition.avgSellPrice, closedPosition.currency)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400">Fecha de cierre</p>

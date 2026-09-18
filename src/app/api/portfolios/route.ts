@@ -7,6 +7,7 @@ import {
   updatePortfolioFields,
 } from "@/lib/portfolio-db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { normalizePortfolioCurrency } from "@/lib/portfolio";
 import type { Portfolio } from "@/lib/portfolio";
 
 export async function GET(request: Request) {
@@ -26,10 +27,11 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { name, description, managesCash } = body as {
+  const { name, description, managesCash, currency } = body as {
     name: string;
     description?: string;
     managesCash?: boolean;
+    currency?: unknown;
   };
 
   if (!name?.trim()) {
@@ -41,6 +43,7 @@ export async function POST(request: Request) {
     ownerUserId: session.userId,
     name: name.trim(),
     description: description?.trim() ?? "",
+    currency: normalizePortfolioCurrency(currency),
     managesCash: Boolean(managesCash),
     createdAt: new Date().toISOString(),
     assets: [],

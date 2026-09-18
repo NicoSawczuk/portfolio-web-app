@@ -83,6 +83,7 @@ FINNHUB_API_TOKEN=YOUR_TOKEN
 FINNHUB_QUOTES_REFRESH_MINUTES=15
 COINMARKETCAP_API_BASE_URL=https://pro-api.coinmarketcap.com
 COINMARKETCAP_API_KEY=YOUR_TOKEN
+BYMA_CEDEARS_URL=https://open.bymadata.com.ar
 ```
 
 Service location:
@@ -100,6 +101,7 @@ Current usage in the app:
 - `GET /api/assets` enriches stored assets with live prices:
 	- Finnhub for `stock` and `etf`.
 	- CoinMarketCap for mapped `crypto` symbols.
+	- BYMA for `cedear` symbols (`price_ars` in ARS; invalid quotes never overwrite the stored price).
 - Quotes are refreshed only when stale according to `FINNHUB_QUOTES_REFRESH_MINUTES` (default: 15), avoiding calls on every page visit.
 - If providers are not configured or fail for a symbol, the persisted local asset price is used as fallback.
 

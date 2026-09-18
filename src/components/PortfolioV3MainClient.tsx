@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { Asset, Portfolio } from "@/lib/portfolio";
+import type { Asset, AssetCurrency, Portfolio } from "@/lib/portfolio";
+import { getPortfolioCurrency } from "@/lib/portfolio";
 import { buildPortfolioPositionsAnalytics } from "@/lib/portfolio-positions";
 import { getPortfolioSummary } from "@/lib/portfolio-summary";
 import {
@@ -31,7 +32,7 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
   const [showAmounts, setShowAmounts] = useState(true);
   const [positionsSearchQuery, setPositionsSearchQuery] = useState("");
 
-  const summary = useMemo(() => getPortfolioSummary(portfolio, initialAssets), [initialAssets, portfolio]);
+  const summary = useMemo(() => getPortfolioSummary(portfolio, initialAssets, { includeChartPoints: false }), [initialAssets, portfolio]);
   const analytics = useMemo(() => buildPortfolioPositionsAnalytics(portfolio, initialAssets), [initialAssets, portfolio]);
 
   const normalizeSearchText = (value: string) =>
@@ -71,7 +72,10 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
     });
   }, [analytics.closedPositions, positionsSearchQuery]);
 
-  const formatCurrencyByVisibility = (value: number) => (showAmounts ? formatCurrency(value) : "••••••");
+  const formatCurrencyByVisibility = (value: number, currency: AssetCurrency = "USD") =>
+    showAmounts ? formatCurrency(value, currency) : "••••••";
+  const formatSignedCurrencyByVisibility = (value: number, currency: AssetCurrency = "USD") =>
+    showAmounts ? formatSignedCurrency(value, currency) : "••••••";
   const formatPercentByVisibility = (value: number) => (showAmounts ? formatPercent(value) : "••••");
   const formatNumberByVisibility = (value: number, maxDigits = 6) => (showAmounts ? formatNumber(value, maxDigits) : "••••");
 
@@ -82,7 +86,12 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
           <div className="card-header portfolio-detail-header">
             <div className="portfolio-detail-header-copy">
               <p className="eyebrow">Portfolio</p>
-              <h1 className="card-title card-title--page">{initialPortfolio.name}</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="card-title card-title--page">{initialPortfolio.name}</h1>
+                <span className="inline-flex rounded-full border border-slate-700 px-2 py-0.5 text-[11px] font-semibold text-slate-300">
+                  {getPortfolioCurrency(portfolio)}
+                </span>
+              </div>
             </div>
             {summary ? (
               <div className="portfolio-detail-summary portfolio-detail-summary--header">
@@ -92,6 +101,8 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
                   totalPnlPct={summary.totalPnlPct}
                   showAmounts={showAmounts}
                   onToggleVisibility={() => setShowAmounts((value) => !value)}
+                  currency={summary.currency}
+                  marketValueByCurrency={summary.marketValueByCurrency}
                 />
               </div>
             ) : null}
@@ -108,6 +119,7 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
               <AddTransactionButton
                 portfolioId={portfolioId}
                 assets={initialAssets}
+                portfolioCurrency={getPortfolioCurrency(portfolio)}
                 onPortfolioUpdated={setPortfolio}
                 buttonClassName="portfolio-add-transaction--mobile"
               />
@@ -144,6 +156,7 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
               <AddTransactionButton
                 portfolioId={portfolioId}
                 assets={initialAssets}
+                portfolioCurrency={getPortfolioCurrency(portfolio)}
                 onPortfolioUpdated={setPortfolio}
                 buttonClassName="portfolio-add-transaction--desktop"
               />
@@ -175,9 +188,9 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
                           </div>
                         </div>
                         <div className="shrink-0 min-w-[7.5rem] text-right">
-                          <p className="text-base font-semibold text-white">{formatCurrencyByVisibility(position.marketValue)}</p>
+                          <p className="text-base font-semibold text-white">{formatCurrencyByVisibility(position.marketValue, position.currency)}</p>
                           <p className={`text-sm font-semibold ${position.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                            {showAmounts ? formatSignedCurrency(position.pnl) : "••••••"}
+                            {formatSignedCurrencyByVisibility(position.pnl, position.currency)}
                           </p>
                           <p className={`text-xs ${position.pnl >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
                             {formatPercentByVisibility(position.pnlPct)}
@@ -192,15 +205,15 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
                         </div>
                         <div>
                           <p className="text-slate-400">Precio actual</p>
-                          <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.currentPrice)}</p>
+                          <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.currentPrice, position.currency)}</p>
                         </div>
                         <div>
                           <p className="text-slate-400">Precio prom.</p>
-                          <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.avgBuyPrice)}</p>
+                          <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.avgBuyPrice, position.currency)}</p>
                         </div>
                         <div>
                           <p className="text-slate-400">Valor invertido</p>
-                          <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.investedValue)}</p>
+                          <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.investedValue, position.currency)}</p>
                         </div>
                         <div>
                           <p className="text-slate-400">% del portfolio</p>
@@ -265,7 +278,7 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
                       </div>
                       <div className="shrink-0 min-w-[7.5rem] text-right">
                         <p className={`text-base font-semibold ${position.realizedPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                          {showAmounts ? formatSignedCurrency(position.realizedPnl) : "••••••"}
+                          {formatSignedCurrencyByVisibility(position.realizedPnl, position.currency)}
                         </p>
                         <p className={`text-xs ${position.realizedPnl >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
                           {formatPercentByVisibility(position.realizedPnlPct)}
@@ -280,15 +293,15 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
                       </div>
                       <div>
                         <p className="text-slate-400">Precio prom. compra</p>
-                        <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.avgBuyPrice)}</p>
+                        <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.avgBuyPrice, position.currency)}</p>
                       </div>
                       <div>
                         <p className="text-slate-400">Precio prom. venta</p>
-                        <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.avgSellPrice)}</p>
+                        <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.avgSellPrice, position.currency)}</p>
                       </div>
                       <div>
                         <p className="text-slate-400">Capital invertido</p>
-                        <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.investedCapital)}</p>
+                        <p className="mt-0.5 text-slate-100">{formatCurrencyByVisibility(position.investedCapital, position.currency)}</p>
                       </div>
                       <div>
                         <p className="text-slate-400">Fecha de cierre</p>

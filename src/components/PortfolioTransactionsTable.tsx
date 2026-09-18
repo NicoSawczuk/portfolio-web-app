@@ -1,15 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Asset, Portfolio, Transaction, TransactionType } from "@/lib/portfolio";
+import type { Asset, AssetCurrency, Portfolio, Transaction, TransactionType } from "@/lib/portfolio";
+import { getAssetCurrency, getAssetCurrentPrice, getPortfolioCurrency } from "@/lib/portfolio";
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number, currency: AssetCurrency = "USD") {
   const formatter = new Intl.NumberFormat("de-DE", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
   });
   const prefix = value < 0 ? "-" : "";
-  return `${prefix}USD ${formatter.format(Math.abs(value))}`;
+  return `${prefix}${currency} ${formatter.format(Math.abs(value))}`;
+}
+
+function getTransactionCurrency(
+  transaction: { assetType?: Transaction["assetType"]; type: Transaction["type"] },
+  portfolioCurrency: AssetCurrency = "USD"
+) {
+  if ((transaction.type === "buy" || transaction.type === "sell") && transaction.assetType) {
+    return getAssetCurrency(transaction.assetType);
+  }
+
+  return portfolioCurrency;
 }
 
 const transactionTypes: Array<{ value: TransactionType; label: string }> = [
@@ -123,16 +135,20 @@ export default function PortfolioTransactionsTable({
   const [transactionsPerPage, setTransactionsPerPage] = useState<10 | 20 | 50 | 100>(20);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const sortedAssets = useMemo(() => {
-    return [...assets].sort((a, b) => {
-      const bySymbol = a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
-      if (bySymbol !== 0) {
-        return bySymbol;
-      }
+  const portfolioCurrency = getPortfolioCurrency(portfolio);
 
-      return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
-    });
-  }, [assets]);
+  const sortedAssets = useMemo(() => {
+    return assets
+      .filter((asset) => getAssetCurrency(asset) === portfolioCurrency)
+      .sort((a, b) => {
+        const bySymbol = a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
+        if (bySymbol !== 0) {
+          return bySymbol;
+        }
+
+        return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+      });
+  }, [assets, portfolioCurrency]);
 
   const selectableAssets = useMemo(() => {
     return filterAssetsByQuery(sortedAssets, assetSelectorQuery);
@@ -430,8 +446,8 @@ export default function PortfolioTransactionsTable({
                     </td>
                     {!hideSymbolColumn ? <td className="px-3 py-3">{transaction.assetSymbol || "-"}</td> : null}
                     <td className="px-3 py-3 text-right">{transaction.quantity ?? "-"}</td>
-                    <td className="px-3 py-3 text-right">{formatCurrency(transaction.price)}</td>
-                    <td className="px-3 py-3 text-right">{amount === null ? "-" : formatCurrency(amount)}</td>
+                    <td className="px-3 py-3 text-right">{formatCurrency(transaction.price, getTransactionCurrency(transaction, portfolioCurrency))}</td>
+                    <td className="px-3 py-3 text-right">{amount === null ? "-" : formatCurrency(amount, getTransactionCurrency(transaction, portfolioCurrency))}</td>
                     <td className="px-3 py-3">
                       <div className="flex justify-center gap-2">
                         <button
@@ -604,7 +620,7 @@ export default function PortfolioTransactionsTable({
                         <option value="">Seleccioná un activo</option>
                         {selectableAssets.map((asset) => (
                           <option key={asset.id} value={asset.id}>
-                            {asset.symbol} - {asset.name} - {formatCurrency(asset.price)}
+                            {asset.symbol} - {asset.name} - {formatCurrency(getAssetCurrentPrice(asset), getAssetCurrency(asset))}
                           </option>
                         ))}
                       </select>
@@ -641,7 +657,7 @@ export default function PortfolioTransactionsTable({
                     </label>
 
                     <label className="modal-field">
-                      Precio
+                      Precio ({portfolioCurrency})
                       <input
                         type="text"
                         inputMode="decimal"
@@ -666,7 +682,7 @@ export default function PortfolioTransactionsTable({
                   </label>
 
                   <label className="modal-field">
-                    Monto
+                    Monto ({portfolioCurrency})
                     <input
                       type="text"
                       inputMode="decimal"

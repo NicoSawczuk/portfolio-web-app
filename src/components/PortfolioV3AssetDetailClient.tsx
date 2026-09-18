@@ -58,7 +58,7 @@ export default function PortfolioV3AssetDetailClient({
   }
 
   const color = getAssetColor(openPosition.assetId, 0);
-  const formatCurrencyByVisibility = (value: number) => formatCurrency(value);
+  const formatCurrencyByVisibility = (value: number) => formatCurrency(value, openPosition.currency);
 
   return (
     <main className="page">
@@ -92,9 +92,9 @@ export default function PortfolioV3AssetDetailClient({
                   <p className="mt-1 text-xl font-semibold text-white">{formatCurrencyByVisibility(openPosition.marketValue)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-400">Ganancia total</p>
+                  <p className="text-sm text-slate-400">Ganancia</p>
                   <p className={`mt-1 text-xl font-semibold ${openPosition.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {formatSignedCurrency(openPosition.pnl)}
+                    {formatSignedCurrency(openPosition.pnl, openPosition.currency)}
                   </p>
                 </div>
                 <div>

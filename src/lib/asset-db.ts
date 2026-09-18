@@ -25,9 +25,18 @@ function normalizeAsset(asset: Asset): Asset {
   // It is not part of the Asset type anymore and is stripped here.
   const { transactions: _legacyTransactions, ...rest } = asset as Asset & { transactions?: unknown };
   void _legacyTransactions;
+  const priceArs = Number(rest.price_ars);
   return {
     ...rest,
     id: rest.id || new ObjectId().toHexString(),
+    price_ars:
+      rest.type === "cedear"
+        ? Number.isFinite(priceArs) && priceArs > 0
+          ? priceArs
+          : 0
+        : Number.isFinite(priceArs) && priceArs > 0
+          ? priceArs
+          : undefined,
   };
 }
 
@@ -39,7 +48,7 @@ interface ReadAssetsOptions {
 export async function readAssets(options: ReadAssetsOptions = {}): Promise<Asset[]> {
   const collection = await getAssetsCollection();
   const projection = options.minimal
-    ? { _id: 0, id: 1, symbol: 1, name: 1, type: 1, price: 1 }
+    ? { _id: 0, id: 1, symbol: 1, name: 1, type: 1, price: 1, price_ars: 1 }
     : { _id: 0 };
   const assets = await collection.find({}, { projection }).sort({ _id: -1 }).toArray();
 
@@ -90,7 +99,7 @@ export async function insertAsset(asset: Asset): Promise<Asset> {
 
 export async function updateAssetById(
   id: string,
-  fields: Partial<Pick<Asset, "symbol" | "name" | "type" | "id_partner" | "price" | "quoteCheckedAt" | "quoteUpdatedAt">>
+  fields: Partial<Pick<Asset, "symbol" | "name" | "type" | "id_partner" | "price" | "price_ars" | "quoteCheckedAt" | "quoteUpdatedAt">>
 ): Promise<Asset | null> {
   const collection = await getAssetsCollection();
   const update: Partial<Asset> = {};
@@ -109,6 +118,9 @@ export async function updateAssetById(
   }
   if (typeof fields.price === "number") {
     update.price = fields.price;
+  }
+  if (fields.price_ars === undefined || typeof fields.price_ars === "number") {
+    update.price_ars = fields.price_ars;
   }
   if (fields.quoteCheckedAt === undefined || typeof fields.quoteCheckedAt === "string") {
     update.quoteCheckedAt = fields.quoteCheckedAt;

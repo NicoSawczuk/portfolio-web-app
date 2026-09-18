@@ -76,9 +76,10 @@ Document structure:
 | `id` | string | Generated from `ObjectId().toHexString()`. |
 | `symbol` | string | Uppercased on API create/update. |
 | `name` | string | Required by API. |
-| `type` | string | `stock`, `etf`, `crypto`, `bond`, `cash`, `other`. |
+| `type` | string | `stock`, `etf`, `crypto`, `bond`, `cash`, `other`, `cedear`. |
 | `id_partner` | number/undefined | Used for CoinMarketCap crypto id. |
-| `price` | number | Current/local price. |
+| `price` | number | Current/local price in USD. Forced to `0` for `cedear` assets. |
+| `price_ars` | number/undefined | Current/local price in ARS, only for `cedear` assets. |
 | `priceSource` | string/undefined | Present in hydrated API responses but not persisted by `refreshAssetsQuotesWithCache()`. |
 | `quoteCheckedAt` | string/undefined | Persisted on quote refresh. |
 | `quoteUpdatedAt` | string/undefined | Persisted on quote refresh when provider returns quote. |
@@ -107,7 +108,7 @@ Delete operations:
 Important queries:
 
 - All assets are loaded for dashboards and asset selectors.
-- Minimal projection is used in portfolio pages to avoid transaction payload.
+- Minimal projection is used in portfolio pages to avoid transaction payload. It includes `price_ars` (`{ _id: 0, id: 1, symbol: 1, name: 1, type: 1, price: 1, price_ars: 1 }`).
 
 Consumers:
 
@@ -141,6 +142,7 @@ Document structure:
 | `ownerUserId` | string/undefined | Used by normal app auth filters. |
 | `name` | string | Required. |
 | `description` | string | Optional string default `""`. |
+| `currency` | string | `USD` or `ARS`. Set at creation, immutable. Missing in legacy docs normalizes to `USD` on read. |
 | `managesCash` | boolean | Normalized to boolean. |
 | `createdAt` | string | ISO timestamp. |
 | `assets` | Asset[] | Embedded asset snapshots. |

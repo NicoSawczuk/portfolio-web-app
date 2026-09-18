@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Asset } from "@/lib/portfolio";
+import { getAssetCurrency, getAssetCurrentPrice, isCedearAsset } from "@/lib/portfolio";
+import { getAssetTypeChipClass } from "@/lib/portfolio-format";
 
 function emptyAssetForm() {
   return {
@@ -13,13 +15,13 @@ function emptyAssetForm() {
   };
 }
 
-function formatPrice(value: number) {
+function formatPrice(value: number, currency: "USD" | "ARS" = "USD") {
   const formatter = new Intl.NumberFormat("de-DE", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
   });
   const prefix = value < 0 ? "-" : "";
-  return `${prefix}USD ${formatter.format(Math.abs(value))}`;
+  return `${prefix}${currency} ${formatter.format(Math.abs(value))}`;
 }
 
 function formatQuoteUpdatedAt(value?: string) {
@@ -32,32 +34,34 @@ function formatQuoteUpdatedAt(value?: string) {
     return null;
   }
 
-  return date.toLocaleString("es-AR", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
 
 function getQuoteCheckedLabel(asset: Asset) {
   const checkedAt = formatQuoteUpdatedAt(asset.quoteCheckedAt);
   if (checkedAt) {
-    return `Consultado ${checkedAt}`;
+    return checkedAt;
   }
 
   const updatedAt = formatQuoteUpdatedAt(asset.quoteUpdatedAt);
   if (updatedAt) {
-    return `Consultado ${updatedAt}`;
+    return updatedAt;
   }
 
-  return "Consulta sin fecha";
+  return "Sin fecha";
 }
 
 const assetTypes: Array<{ value: Asset["type"]; label: string }> = [
   { value: "stock", label: "Acción" },
   { value: "etf", label: "ETF" },
+  { value: "cedear", label: "CEDEAR" },
   { value: "crypto", label: "Cripto" },
   { value: "bond", label: "Bono" },
   { value: "cash", label: "Efectivo" },
@@ -74,6 +78,9 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTypes, setSelectedTypes] = useState<Array<Asset["type"]>>([]);
+  const [typeFilterOpen, setTypeFilterOpen] = useState(false);
+  const typeFilterRef = useRef<HTMLDivElement>(null);
   const [assetsPerPage, setAssetsPerPage] = useState<10 | 20 | 50 | 100>(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -99,6 +106,44 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
     }
   };
 
+  const toggleTypeFilter = (type: Asset["type"]) => {
+    setSelectedTypes((current) =>
+      current.includes(type) ? current.filter((item) => item !== type) : [...current, type]
+    );
+    setCurrentPage(1);
+  };
+
+  const clearTypeFilter = () => {
+    setSelectedTypes([]);
+    setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    if (!typeFilterOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (typeFilterRef.current && !typeFilterRef.current.contains(event.target as Node)) {
+        setTypeFilterOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setTypeFilterOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [typeFilterOpen]);
+
   const openAssetEditor = (asset?: Asset) => {
     if (asset) {
       setEditingAssetId(asset.id);
@@ -107,7 +152,7 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
         name: asset.name,
         type: asset.type,
         id_partner: String(asset.id_partner ?? ""),
-        price: String(asset.price),
+        price: String(isCedearAsset(asset) ? (asset.price_ars ?? 0) : asset.price),
       });
       setIsModalOpen(true);
       return;
@@ -136,6 +181,7 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
     setError(null);
 
     try {
+      const isCedear = assetForm.type === "cedear";
       const response = await fetch("/api/assets", {
         method: editingAssetId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -150,7 +196,9 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                   assetForm.type === "crypto" && assetForm.id_partner.trim()
                     ? Number(assetForm.id_partner)
                     : undefined,
-                price: Number(assetForm.price || 0),
+                ...(isCedear
+                  ? { price_ars: Number(assetForm.price || 0) }
+                  : { price: Number(assetForm.price || 0) }),
               }
             : {
                 symbol: assetForm.symbol,
@@ -160,7 +208,9 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                   assetForm.type === "crypto" && assetForm.id_partner.trim()
                     ? Number(assetForm.id_partner)
                     : undefined,
-                price: Number(assetForm.price || 0),
+                ...(isCedear
+                  ? { price_ars: Number(assetForm.price || 0) }
+                  : { price: Number(assetForm.price || 0) }),
               }
         ),
       });
@@ -207,18 +257,38 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
     }
   };
 
-  const filteredAssets = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+  const assetCountByType = useMemo(() => {
+    const counts = new Map<Asset["type"], number>();
+    for (const asset of assets) {
+      counts.set(asset.type, (counts.get(asset.type) ?? 0) + 1);
+    }
+    return counts;
+  }, [assets]);
 
-    const matchedAssets = !query
-      ? assets
-      : assets.filter((asset) => {
-          return (
-            asset.symbol.toLowerCase().includes(query) ||
-            asset.name.toLowerCase().includes(query) ||
-            asset.type.toLowerCase().includes(query)
-          );
-        });
+  const typeFilterLabel =
+    selectedTypes.length === 0
+      ? "Todos los tipos"
+      : selectedTypes.length === 1
+        ? (assetTypes.find((item) => item.value === selectedTypes[0])?.label ?? "1 tipo")
+        : `${selectedTypes.length} tipos`;
+
+  const filteredAssets = useMemo(() => {    const query = searchQuery.trim().toLowerCase();
+
+    const matchedAssets = assets.filter((asset) => {
+      if (selectedTypes.length > 0 && !selectedTypes.includes(asset.type)) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      return (
+        asset.symbol.toLowerCase().includes(query) ||
+        asset.name.toLowerCase().includes(query) ||
+        asset.type.toLowerCase().includes(query)
+      );
+    });
 
     return [...matchedAssets].sort((a, b) => {
       const bySymbol = a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
@@ -228,7 +298,7 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
 
       return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
     });
-  }, [assets, searchQuery]);
+  }, [assets, searchQuery, selectedTypes]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / assetsPerPage));
   const boundedCurrentPage = Math.min(currentPage, totalPages);
@@ -337,6 +407,52 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                 <option value={50}>50</option>
                 <option value={100}>100</option>
               </select>
+              <div className="assets-type-dropdown" ref={typeFilterRef}>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilterOpen((value) => !value)}
+                  aria-expanded={typeFilterOpen}
+                  aria-haspopup="listbox"
+                  className="control assets-type-dropdown-button"
+                >
+                  <span>{typeFilterLabel}</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    className={`assets-type-dropdown-chevron${typeFilterOpen ? " assets-type-dropdown-chevron--open" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+                {typeFilterOpen ? (
+                  <div className="assets-type-dropdown-panel" role="listbox" aria-label="Filtrar por tipo" aria-multiselectable="true">
+                    {assetTypes.map((item) => (
+                      <label key={item.value} className="assets-type-dropdown-option">
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.includes(item.value)}
+                          onChange={() => toggleTypeFilter(item.value)}
+                          className="modal-checkbox"
+                        />
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getAssetTypeChipClass(item.value)}`}>
+                          {item.label}
+                        </span>
+                        <span className="assets-type-dropdown-count">{assetCountByType.get(item.value) ?? 0}</span>
+                      </label>
+                    ))}
+                    {selectedTypes.length > 0 ? (
+                      <button type="button" onClick={clearTypeFilter} className="assets-type-dropdown-clear">
+                        Limpiar
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -345,12 +461,21 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
               {filteredAssets.length ? (
                 paginatedAssets.map((asset) => (
                   <div key={asset.id} className="assets-row">
-                    <div>
-                      <p className="assets-symbol" title={asset.name}>
-                        {asset.symbol}
-                      </p>
+                    <div className="assets-row-top">
+                      <div className="assets-symbol-line">
+                        <p className="assets-symbol" title={asset.name}>
+                          {asset.symbol}
+                        </p>
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getAssetTypeChipClass(asset.type)}`}>
+                          {assetTypes.find((item) => item.value === asset.type)?.label}
+                        </span>
+                      </div>
+                      <div className="assets-row-side">
+                        <span className="assets-price">{formatPrice(getAssetCurrentPrice(asset), getAssetCurrency(asset))}</span>
+                      </div>
                     </div>
-                    <div className="assets-row-meta">
+                    <p className="assets-name">{asset.name}</p>
+                    <div className="assets-row-foot">
                       <div className="assets-quote">
                         <span
                           className={`assets-badge ${
@@ -361,60 +486,58 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                         </span>
                         <span className="assets-quote-time">{getQuoteCheckedLabel(asset)}</span>
                       </div>
-                      <span className="assets-type">
-                        {assetTypes.find((item) => item.value === asset.type)?.label}
-                      </span>
-                      <span className="assets-price">{formatPrice(asset.price)}</span>
-                      <button
-                        type="button"
-                        onClick={() => openAssetEditor(asset)}
-                        aria-label={`Editar ${asset.symbol}`}
-                        title={`Editar ${asset.symbol}`}
-                        className="button button-secondary assets-row-action"
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="assets-icon"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
+                      <div className="assets-row-actions">
+                        <button
+                          type="button"
+                          onClick={() => openAssetEditor(asset)}
+                          aria-label={`Editar ${asset.symbol}`}
+                          title={`Editar ${asset.symbol}`}
+                          className="button button-secondary assets-row-action"
                         >
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteAsset(asset.id)}
-                        aria-label={`Eliminar ${asset.symbol}`}
-                        title={`Eliminar ${asset.symbol}`}
-                        className="button button-secondary assets-row-action assets-row-action-delete"
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="assets-icon"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="assets-icon"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAsset(asset.id)}
+                          aria-label={`Eliminar ${asset.symbol}`}
+                          title={`Eliminar ${asset.symbol}`}
+                          className="button button-secondary assets-row-action assets-row-action-delete"
                         >
-                          <path d="M3 6h18" />
-                          <path d="M8 6V4h8v2" />
-                          <path d="M19 6l-1 14H6L5 6" />
-                          <path d="M10 11v6" />
-                          <path d="M14 11v6" />
-                        </svg>
-                      </button>
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="assets-icon"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4h8v2" />
+                            <path d="M19 6l-1 14H6L5 6" />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="assets-empty">No hay activos que coincidan con la búsqueda.</div>
+                <div className="assets-empty">No hay activos que coincidan con los filtros.</div>
               )}
             </div>
 
@@ -529,7 +652,7 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
 
               <div className="modal-form-grid">
                 <label className="modal-field">
-                  Precio actual
+                  Precio actual ({assetForm.type === "cedear" ? "ARS" : "USD"})
                   <input
                     type="number"
                     value={assetForm.price}

@@ -85,6 +85,7 @@ API routes:
 | `/api/auth/logout` | POST | `src/app/api/auth/logout/route.ts` |
 | `/api/auth/me` | GET | `src/app/api/auth/me/route.ts` |
 | `/api/assets` | GET, POST, PUT, DELETE | `src/app/api/assets/route.ts` |
+| `/api/byma/cedears` | GET, POST | `src/app/api/byma/cedears/route.ts` |
 | `/api/portfolios` | GET, POST, PUT, DELETE | `src/app/api/portfolios/route.ts` |
 | `/api/portfolios/[id]` | GET, POST, PUT, DELETE | `src/app/api/portfolios/[id]/route.ts` |
 | `/api/integrations/portfolios/[id]/transactions` | POST | `src/app/api/integrations/portfolios/[id]/transactions/route.ts` |
@@ -145,13 +146,22 @@ CoinMarketCap:
 - Auth header: `X-CMC_PRO_API_KEY`.
 - Eligible: `crypto` assets with valid `id_partner` or default symbol mapping.
 
+BYMA (CEDEARs):
+
+- File: `src/lib/byma-service.ts`.
+- Base URL from `BYMA_CEDEARS_URL` (default `https://open.bymadata.com.ar`), path `/vanoms-be-core/rest/api/bymadata/free/cedears`.
+- `POST` with body `{ excludeZeroPxAndQty: true, T1: true, T0: false }`, no auth.
+- Returns the full CEDEAR list (`symbol`, `bidPrice`, ...); the service filters by requested symbols and keeps only finite `bidPrice > 0`. The full dump is cached in memory with TTL (`BYMA_CEDEARS_TTL_MINUTES`, default 15) and concurrent callers share the in-flight request.
+- Eligible: `cedear` assets only. Refresh writes `price_ars` (ARS) and never touches `price`; invalid/out-of-market quotes are discarded without overwriting the stored price.
+- Direct access: `GET /api/byma/cedears?symbols=AAPL,MELI` or `POST /api/byma/cedears` with `{ "symbols": [...] }`.
+
 ## Caching And Revalidation
 
 Current implementation:
 
 - Next pages generally force dynamic rendering.
 - Provider fetch calls use `cache: "no-store"`.
-- Quote freshness is implemented through persisted fields `quoteUpdatedAt` and `quoteCheckedAt`, with `FINNHUB_QUOTES_REFRESH_MINUTES` defaulting to 15.
+- Quote freshness is implemented through persisted fields `quoteUpdatedAt` and `quoteCheckedAt`, with `FINNHUB_QUOTES_REFRESH_MINUTES` defaulting to 15. Freshness is evaluated against the effective price (`price_ars` for `cedear`, `price` otherwise).
 - `/api/assets` refreshes live quotes only when `forceRefresh=1`; otherwise it returns stored assets.
 
 UNKNOWN / REQUIRES CONFIRMATION:

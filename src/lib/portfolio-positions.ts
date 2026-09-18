@@ -1,4 +1,5 @@
-import type { Asset, AssetType, Portfolio, Transaction } from "@/lib/portfolio";
+import type { Asset, AssetCurrency, AssetType, Portfolio, Transaction } from "@/lib/portfolio";
+import { getAssetCurrency, getAssetCurrentPrice, getPortfolioCurrency } from "@/lib/portfolio";
 import { calculateCashTotals } from "@/lib/portfolio-summary";
 
 export interface OpenPositionSummary {
@@ -6,6 +7,7 @@ export interface OpenPositionSummary {
   symbol: string;
   name: string;
   type: AssetType;
+  currency: AssetCurrency;
   quantity: number;
   avgBuyPrice: number;
   currentPrice: number;
@@ -23,6 +25,7 @@ export interface ClosedPositionSummary {
   symbol: string;
   name: string;
   type: AssetType;
+  currency: AssetCurrency;
   realizedPnl: number;
   realizedPnlPct: number;
   investedCapital: number;
@@ -35,7 +38,9 @@ export interface ClosedPositionSummary {
 export interface PortfolioPositionsAnalytics {
   openPositions: OpenPositionSummary[];
   closedPositions: ClosedPositionSummary[];
+  currency: AssetCurrency;
   totalOpenMarketValue: number;
+  marketValueByCurrency: Record<AssetCurrency, number>;
   allTransactions: Transaction[];
   transactionsByAssetId: Map<string, Transaction[]>;
 }
@@ -156,7 +161,9 @@ export function buildPortfolioPositionsAnalytics(
     .filter((item) => item.quantity > POSITION_EPSILON)
     .map<OpenPositionSummary>((item) => {
       const meta = assetById.get(item.assetId);
-      const currentPrice = Number(meta?.price ?? 0);
+      const type = item.type || meta?.type || "other";
+      const currency = getAssetCurrency(meta?.type ?? item.type);
+      const currentPrice = meta ? getAssetCurrentPrice(meta) : 0;
       const marketValue = item.quantity * currentPrice;
       const investedValue = item.quantity * item.avgBuyPrice;
       const pnl = marketValue - investedValue;
@@ -166,7 +173,8 @@ export function buildPortfolioPositionsAnalytics(
         assetId: item.assetId,
         symbol: item.symbol || meta?.symbol || "",
         name: item.name || meta?.name || "Activo",
-        type: item.type || meta?.type || "other",
+        type,
+        currency,
         quantity: item.quantity,
         avgBuyPrice: item.avgBuyPrice,
         currentPrice,
@@ -191,11 +199,13 @@ export function buildPortfolioPositionsAnalytics(
   if (Boolean(portfolio.managesCash)) {
     const { balance: cashBalance } = calculateCashTotals(portfolio);
     const normalizedCashBalance = Math.abs(cashBalance) < POSITION_EPSILON ? 0 : cashBalance;
+    const cashCurrency = getPortfolioCurrency(portfolio);
     openPositions.unshift({
       assetId: `cash:${portfolio.id}`,
-      symbol: "USD",
+      symbol: cashCurrency,
       name: "Efectivo",
       type: "cash",
+      currency: cashCurrency,
       quantity: normalizedCashBalance,
       avgBuyPrice: 1,
       currentPrice: 1,
@@ -210,6 +220,10 @@ export function buildPortfolioPositionsAnalytics(
   }
 
   const totalOpenMarketValue = openPositions.reduce((sum, item) => sum + item.marketValue, 0);
+  const marketValueByCurrency: Record<AssetCurrency, number> = { USD: 0, ARS: 0 };
+  for (const item of openPositions) {
+    marketValueByCurrency[item.currency] += item.marketValue;
+  }
 
   const openPositionsWithShare = openPositions.map((item) => ({
     ...item,
@@ -228,6 +242,7 @@ export function buildPortfolioPositionsAnalytics(
         symbol: item.symbol || meta?.symbol || "",
         name: item.name || meta?.name || "Activo",
         type: item.type || meta?.type || "other",
+        currency: getAssetCurrency(meta?.type ?? item.type),
         realizedPnl: item.realizedPnl,
         realizedPnlPct,
         investedCapital,
@@ -262,7 +277,9 @@ export function buildPortfolioPositionsAnalytics(
   return {
     openPositions: openPositionsWithShare,
     closedPositions,
+    currency: getPortfolioCurrency(portfolio),
     totalOpenMarketValue,
+    marketValueByCurrency,
     allTransactions,
     transactionsByAssetId,
   };
