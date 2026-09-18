@@ -32,16 +32,19 @@ Document structure:
 | `password` | string | `saltHex:keyHex` from scrypt. |
 | `expiration_date` | string | ISO date string used to allow/deny login. |
 | `createdAt` | string | ISO creation timestamp. |
+| `telegramUserId` | number/undefined | Telegram user id. Set directly in MongoDB; used to attribute n8n integration calls. |
 
 Indexes:
 
 - `{ id: 1 }`, unique.
 - `{ email: 1 }`, unique.
 - `{ expiration_date: 1 }`.
+- `{ telegramUserId: 1 }`, sparse.
 
 Read operations:
 
 - `findUserByEmail(email)` -> `findOne({ email: normalized })`.
+- `findUserByTelegramId(telegramUserId)` -> `findOne({ telegramUserId })`, null for non-positive integers.
 
 Write operations:
 
@@ -58,6 +61,78 @@ Consumers:
 Performance considerations:
 
 - Email lookup is indexed.
+
+### `users_permissions`
+
+Purpose:
+
+- Stores per-user action permissions. One document per user + action. A user holds many permissions.
+- Currently only asset actions are enforced. Missing document means denied (deny-by-default).
+
+Implementation:
+
+- `src/lib/permissions.ts` (action constants)
+- `src/lib/user-permissions-db.ts`
+
+Document structure:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `userId` | string | Matches `users.id`. |
+| `action` | string | Lower-cased on read/check (e.g. `assets:create`). |
+| `createdAt` | string | ISO creation timestamp. |
+
+Valid actions:
+
+| Action | Grants |
+| --- | --- |
+| `assets:create` | `POST /api/assets` and the create button/modal on the assets page. |
+| `assets:edit` | `PUT /api/assets` and the edit button/modal on the assets page. |
+| `assets:delete` | `DELETE /api/assets` and the delete button on the assets page. |
+| `assets:refresh` | `GET /api/assets?forceRefresh=1` and the refresh-quotes button on the assets page. |
+| `n8n_transactions:create` | `POST /api/integrations/portfolios/[id]/transactions` for the caller identified by `telegramUserId`. |
+
+Indexes:
+
+- `{ userId: 1, action: 1 }`, unique.
+- `{ userId: 1 }`.
+- `{ action: 1 }`.
+
+Read operations:
+
+- `getUserPermissionActions(userId)` -> `find({ userId })`, returns normalized action strings.
+- `hasUserPermission(userId, action)` -> `findOne({ userId, action })`, boolean.
+- `getUserAssetPermissions(userId)` -> `{ canCreate, canEdit, canDelete, canRefresh }`.
+
+Write operations:
+
+- None in runtime code. Permissions are granted directly in MongoDB (no management UI or API).
+
+Delete operations:
+
+- None in runtime code. Permissions are revoked directly in MongoDB.
+
+Grant example:
+
+```js
+db.users_permissions.insertMany([
+  { userId: "<users.id>", action: "assets:create", createdAt: new Date().toISOString() },
+  { userId: "<users.id>", action: "assets:edit", createdAt: new Date().toISOString() },
+  { userId: "<users.id>", action: "assets:delete", createdAt: new Date().toISOString() },
+  { userId: "<users.id>", action: "assets:refresh", createdAt: new Date().toISOString() },
+]);
+```
+
+Consumers:
+
+- Assets API route (POST/PUT/DELETE/forceRefresh enforcement, 403 on missing permission).
+- Assets server page (loads `canCreate/canEdit/canDelete/canRefresh` for the view).
+- `GET /api/auth/me` and `POST /api/auth/login` (return `permissions: string[]`).
+- Integration transactions endpoint (requires `n8n_transactions:create` for the `telegramUserId` caller).
+
+Performance considerations:
+
+- Permission checks are single indexed `findOne` queries per mutating request.
 
 ### `assets`
 
@@ -179,12 +254,10 @@ Write operations:
 - `insertPortfolio(portfolio)` -> `insertOne`.
 - `replacePortfolioById(id, portfolio, ownerUserId?)` -> `replaceOne`.
 - `updatePortfolioFields(id, fields, ownerUserId?)` -> `findOneAndUpdate` with `$set`.
-- `writePortfolios(portfolios)` -> bulk upsert and delete missing ids.
 
 Delete operations:
 
 - `deletePortfolioById(id, ownerUserId?)` -> `deleteOne`.
-- `writePortfolios([])` -> `deleteMany({})`.
 
 Important queries:
 
@@ -203,7 +276,6 @@ Performance considerations:
 - Mutating one transaction replaces the entire portfolio document.
 - Large transaction histories can create large documents and larger write payloads.
 - No index can target embedded transactions for current runtime access because reads fetch whole portfolio documents by portfolio id.
-- `writePortfolios()` can delete all portfolio documents not included in input; currently appears helper/import oriented.
 
 ## Aggregations
 

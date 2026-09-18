@@ -120,32 +120,6 @@ export async function deletePortfolioById(id: string, ownerUserId?: string): Pro
   return result.deletedCount > 0;
 }
 
-export async function writePortfolios(portfolios: Portfolio[]) {
-  const collection = await getPortfoliosCollection();
-  const normalizedPortfolios = portfolios.map(normalizePortfolio);
-
-  if (normalizedPortfolios.length === 0) {
-    await collection.deleteMany({});
-    return;
-  }
-
-  await collection.bulkWrite(
-    normalizedPortfolios.map((portfolio) => ({
-      updateOne: {
-        filter: { id: portfolio.id },
-        update: { $set: portfolio },
-        upsert: true,
-      },
-    }))
-  );
-
-  await collection.deleteMany({
-    id: {
-      $nin: normalizedPortfolios.map((portfolio) => portfolio.id),
-    },
-  });
-}
-
 export function createPortfolioId() {
   return new ObjectId().toHexString();
 }

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createAssetId, deleteAssetById, insertAsset, readAssets, updateAssetById, writeAssets } from "@/lib/asset-db";
 import { refreshAssetsQuotesWithCache } from "@/lib/finnhub-service";
 import { getSessionFromRequest } from "@/lib/auth";
+import { ASSET_PERMISSIONS } from "@/lib/permissions";
+import { hasUserPermission } from "@/lib/user-permissions-db";
 import type { Asset } from "@/lib/portfolio";
 
 function normalizePartnerId(value: unknown) {
@@ -40,6 +42,10 @@ export async function GET(request: Request) {
   const forceRefreshRaw = requestUrl.searchParams.get("forceRefresh")?.toLowerCase();
   const forceRefresh = forceRefreshRaw === "1" || forceRefreshRaw === "true";
 
+  if (forceRefresh && !(await hasUserPermission(session.userId, ASSET_PERMISSIONS.REFRESH))) {
+    return NextResponse.json({ error: "No tenés permiso para refrescar cotizaciones." }, { status: 403 });
+  }
+
   const assets = await readAssets();
   if (!forceRefresh) {
     return NextResponse.json(assets);
@@ -60,6 +66,10 @@ export async function POST(request: Request) {
   const session = getSessionFromRequest(request);
   if (!session) {
     return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
+  if (!(await hasUserPermission(session.userId, ASSET_PERMISSIONS.CREATE))) {
+    return NextResponse.json({ error: "No tenés permiso para crear activos." }, { status: 403 });
   }
 
   const body = await request.json();
@@ -105,6 +115,10 @@ export async function PUT(request: Request) {
   const session = getSessionFromRequest(request);
   if (!session) {
     return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
+  if (!(await hasUserPermission(session.userId, ASSET_PERMISSIONS.EDIT))) {
+    return NextResponse.json({ error: "No tenés permiso para editar activos." }, { status: 403 });
   }
 
   const body = await request.json();
@@ -153,6 +167,10 @@ export async function DELETE(request: Request) {
   const session = getSessionFromRequest(request);
   if (!session) {
     return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  }
+
+  if (!(await hasUserPermission(session.userId, ASSET_PERMISSIONS.DELETE))) {
+    return NextResponse.json({ error: "No tenés permiso para eliminar activos." }, { status: 403 });
   }
 
   const { id } = (await request.json()) as { id: string };

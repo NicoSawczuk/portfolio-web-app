@@ -13,6 +13,7 @@ interface UserDocument {
   password: string;
   expiration_date: string;
   createdAt: string;
+  telegramUserId?: number;
 }
 
 export interface PublicUser {
@@ -20,6 +21,7 @@ export interface PublicUser {
   email: string;
   name: string;
   expiration_date: string;
+  telegramUserId?: number;
 }
 
 async function getUsersCollection() {
@@ -30,6 +32,7 @@ async function getUsersCollection() {
       await collection.createIndex({ id: 1 }, { unique: true });
       await collection.createIndex({ email: 1 }, { unique: true });
       await collection.createIndex({ expiration_date: 1 });
+      await collection.createIndex({ telegramUserId: 1 }, { sparse: true });
       return collection;
     })();
   }
@@ -43,6 +46,7 @@ function toPublicUser(user: UserDocument): PublicUser {
     email: user.email,
     name: user.name,
     expiration_date: user.expiration_date,
+    ...(typeof user.telegramUserId === "number" ? { telegramUserId: user.telegramUserId } : {}),
   };
 }
 
@@ -50,6 +54,15 @@ export async function findUserByEmail(email: string) {
   const collection = await getUsersCollection();
   const normalized = normalizeEmail(email);
   return collection.findOne({ email: normalized }, { projection: { _id: 0 } });
+}
+
+export async function findUserByTelegramId(telegramUserId: number) {
+  if (!Number.isInteger(telegramUserId) || telegramUserId <= 0) {
+    return null;
+  }
+
+  const collection = await getUsersCollection();
+  return collection.findOne({ telegramUserId }, { projection: { _id: 0 } });
 }
 
 export async function createUser(params: {

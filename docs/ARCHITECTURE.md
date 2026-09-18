@@ -105,6 +105,7 @@ Persistence modules:
 - `portfolio-db.ts`: collection `portfolios`.
 - `asset-db.ts`: collection `assets`.
 - `user-db.ts`: collection `users`.
+- `user-permissions-db.ts`: collection `users_permissions`; `permissions.ts` holds the action constants.
 
 Pattern:
 
@@ -128,7 +129,11 @@ Authorization:
 - `src/proxy.ts` redirects unauthenticated page requests to `/login`.
 - API routes return 401 if unauthenticated, except public auth routes.
 - Portfolio reads/writes from normal UI include `ownerUserId` filter.
-- Integration endpoint uses only `PORTFOLIO_TRANSACTIONS_API_KEY` and calls `readPortfolioById(id)` without owner filter.
+- Asset mutations require a `users_permissions` document (deny-by-default): `POST /api/assets` needs `assets:create`, `PUT` needs `assets:edit`, `DELETE` needs `assets:delete`, and `GET /api/assets?forceRefresh=1` needs `assets:refresh`. Missing permission returns 403. Plain `GET /api/assets` stays open to authenticated users.
+- The assets server page loads `{ canCreate, canEdit, canDelete, canRefresh }` and `AssetsPageClient` hides the corresponding buttons and guards the handlers client-side.
+- `GET /api/auth/me` and `POST /api/auth/login` return `permissions: string[]`.
+- Permissions are managed directly in MongoDB; there is no management UI or API.
+- Integration endpoint requires `x-api-key` plus a body `telegramUserId` that must match an active user holding `n8n_transactions:create` and owning the portfolio in the URL (foreign portfolios return 404).
 
 ## External Services
 

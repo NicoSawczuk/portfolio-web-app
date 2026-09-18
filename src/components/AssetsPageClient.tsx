@@ -70,9 +70,20 @@ const assetTypes: Array<{ value: Asset["type"]; label: string }> = [
 
 interface AssetsPageClientProps {
   initialAssets: Asset[];
+  initialPermissions?: AssetPermissions;
 }
 
-export default function AssetsPageClient({ initialAssets }: AssetsPageClientProps) {
+export interface AssetPermissions {
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canRefresh?: boolean;
+}
+
+export default function AssetsPageClient({
+  initialAssets,
+  initialPermissions = { canCreate: false, canEdit: false, canDelete: false, canRefresh: false },
+}: AssetsPageClientProps) {
   const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const [assetForm, setAssetForm] = useState(emptyAssetForm());
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
@@ -88,19 +99,24 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
   const [error, setError] = useState<string | null>(null);
 
   const handleRefreshQuotes = async () => {
+    if (!initialPermissions.canRefresh) {
+      setError("No tenés permiso para refrescar cotizaciones.");
+      return;
+    }
     setRefreshingQuotes(true);
     setError(null);
 
     try {
       const response = await fetch("/api/assets?forceRefresh=1");
       if (!response.ok) {
-        throw new Error("No se pudieron refrescar las cotizaciones.");
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "No se pudieron refrescar las cotizaciones.");
       }
 
       const refreshedAssets = (await response.json()) as Asset[];
       setAssets(refreshedAssets);
     } catch (err) {
-      setError(String(err));
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setRefreshingQuotes(false);
     }
@@ -145,6 +161,14 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
   }, [typeFilterOpen]);
 
   const openAssetEditor = (asset?: Asset) => {
+    if (asset && !initialPermissions.canEdit) {
+      setError("No tenés permiso para editar activos.");
+      return;
+    }
+    if (!asset && !initialPermissions.canCreate) {
+      setError("No tenés permiso para crear activos.");
+      return;
+    }
     if (asset) {
       setEditingAssetId(asset.id);
       setAssetForm({
@@ -172,6 +196,14 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
   };
 
   const handleSaveAsset = async () => {
+    if (editingAssetId && !initialPermissions.canEdit) {
+      setError("No tenés permiso para editar activos.");
+      return;
+    }
+    if (!editingAssetId && !initialPermissions.canCreate) {
+      setError("No tenés permiso para crear activos.");
+      return;
+    }
     if (!assetForm.symbol.trim() || !assetForm.name.trim()) {
       setError("El símbolo y el nombre son obligatorios.");
       return;
@@ -229,13 +261,17 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
       });
       closeAssetModal();
     } catch (err) {
-      setError(String(err));
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteAsset = async (assetId: string) => {
+    if (!initialPermissions.canDelete) {
+      setError("No tenés permiso para eliminar activos.");
+      return;
+    }
     const confirmed = window.confirm("¿Querés eliminar este activo?");
     if (!confirmed) return;
 
@@ -253,7 +289,7 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
 
       setAssets((current) => current.filter((asset) => asset.id !== assetId));
     } catch (err) {
-      setError(String(err));
+      setError(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -316,49 +352,53 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
             <h1 className="card-title card-title--page">Activos</h1>
           </div>
           <div className="header-actions">
-            <button
-              type="button"
-              onClick={handleRefreshQuotes}
-              disabled={refreshingQuotes}
-              aria-label="Refrescar cotizaciones"
-              title="Refrescar cotizaciones"
-              className="button button-secondary header-action-button"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className={`header-action-icon ${refreshingQuotes ? "spin" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+            {initialPermissions.canRefresh ? (
+              <button
+                type="button"
+                onClick={handleRefreshQuotes}
+                disabled={refreshingQuotes}
+                aria-label="Refrescar cotizaciones"
+                title="Refrescar cotizaciones"
+                className="button button-secondary header-action-button"
               >
-                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-                <path d="M21 3v6h-6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => openAssetEditor()}
-              aria-label="Agregar activo"
-              title="Agregar activo"
-              className="button button-primary header-action-button"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="header-action-icon"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+                <svg
+                  viewBox="0 0 24 24"
+                  className={`header-action-icon ${refreshingQuotes ? "spin" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                  <path d="M21 3v6h-6" />
+                </svg>
+              </button>
+            ) : null}
+            {initialPermissions.canCreate ? (
+              <button
+                type="button"
+                onClick={() => openAssetEditor()}
+                aria-label="Agregar activo"
+                title="Agregar activo"
+                className="button button-primary header-action-button"
               >
-                <path d="M12 5v14" />
-                <path d="M5 12h14" />
-              </svg>
-            </button>
+                <svg
+                  viewBox="0 0 24 24"
+                  className="header-action-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 5v14" />
+                  <path d="M5 12h14" />
+                </svg>
+              </button>
+            ) : null}
           </div>
         </header>
 
@@ -487,51 +527,55 @@ export default function AssetsPageClient({ initialAssets }: AssetsPageClientProp
                         <span className="assets-quote-time">{getQuoteCheckedLabel(asset)}</span>
                       </div>
                       <div className="assets-row-actions">
-                        <button
-                          type="button"
-                          onClick={() => openAssetEditor(asset)}
-                          aria-label={`Editar ${asset.symbol}`}
-                          title={`Editar ${asset.symbol}`}
-                          className="button button-secondary assets-row-action"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="assets-icon"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
+                        {initialPermissions.canEdit ? (
+                          <button
+                            type="button"
+                            onClick={() => openAssetEditor(asset)}
+                            aria-label={`Editar ${asset.symbol}`}
+                            title={`Editar ${asset.symbol}`}
+                            className="button button-secondary assets-row-action"
                           >
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteAsset(asset.id)}
-                          aria-label={`Eliminar ${asset.symbol}`}
-                          title={`Eliminar ${asset.symbol}`}
-                          className="button button-secondary assets-row-action assets-row-action-delete"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="assets-icon"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="assets-icon"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" />
+                            </svg>
+                          </button>
+                        ) : null}
+                        {initialPermissions.canDelete ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAsset(asset.id)}
+                            aria-label={`Eliminar ${asset.symbol}`}
+                            title={`Eliminar ${asset.symbol}`}
+                            className="button button-secondary assets-row-action assets-row-action-delete"
                           >
-                            <path d="M3 6h18" />
-                            <path d="M8 6V4h8v2" />
-                            <path d="M19 6l-1 14H6L5 6" />
-                            <path d="M10 11v6" />
-                            <path d="M14 11v6" />
-                          </svg>
-                        </button>
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="assets-icon"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M3 6h18" />
+                              <path d="M8 6V4h8v2" />
+                              <path d="M19 6l-1 14H6L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                            </svg>
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>

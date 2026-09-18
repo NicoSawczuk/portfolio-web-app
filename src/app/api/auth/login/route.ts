@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth";
 import { consumeRateLimit, getClientIp } from "@/lib/rate-limit";
 import { findUserByEmail, mapUserDocumentToPublic } from "@/lib/user-db";
+import { getUserPermissionActions } from "@/lib/user-permissions-db";
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
@@ -60,11 +61,12 @@ export async function POST(request: Request) {
   }
 
   const publicUser = mapUserDocumentToPublic(user);
+  const permissions = await getUserPermissionActions(publicUser.id);
   const sessionPayload = createSessionPayload(publicUser);
   const sessionToken = createSessionToken(sessionPayload);
   const cookieStore = await cookies();
 
   cookieStore.set(AUTH_COOKIE_NAME, sessionToken, getAuthCookieOptions(sessionPayload.sessionExpiresAt));
 
-  return NextResponse.json({ user: publicUser });
+  return NextResponse.json({ user: publicUser, permissions });
 }
