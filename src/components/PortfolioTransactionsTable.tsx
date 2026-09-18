@@ -111,6 +111,7 @@ interface PortfolioTransactionsTableProps {
   searchPlaceholder?: string;
   lockedAssetId?: string;
   hideSymbolColumn?: boolean;
+  sectionClassName?: string;
   onPortfolioUpdated: (next: Portfolio) => void;
 }
 
@@ -122,6 +123,7 @@ export default function PortfolioTransactionsTable({
   searchPlaceholder = "Buscar activo",
   lockedAssetId,
   hideSymbolColumn = false,
+  sectionClassName = "",
   onPortfolioUpdated,
 }: PortfolioTransactionsTableProps) {
   const [error, setError] = useState<string | null>(null);
@@ -350,7 +352,7 @@ export default function PortfolioTransactionsTable({
   };
 
   return (
-    <section className="card portfolio-detail-section">
+    <section className={`card portfolio-detail-section${sectionClassName ? ` ${sectionClassName}` : ""}`}>
       <div className="portfolio-detail-section-header portfolio-detail-transactions-header">
         <div>
           <h2 className="portfolio-detail-section-title">{title}</h2>

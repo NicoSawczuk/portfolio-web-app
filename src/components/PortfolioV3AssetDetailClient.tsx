@@ -59,88 +59,79 @@ export default function PortfolioV3AssetDetailClient({
 
   const color = getAssetColor(openPosition.assetId, 0);
   const formatCurrencyByVisibility = (value: number) => formatCurrency(value, openPosition.currency);
+  const isPositive = openPosition.pnl >= 0;
 
   return (
     <main className="page">
-      <div className="page-container">
-        <section className="card portfolio-detail-section">
-          <div className="card-content">
-            <Link href={`/portfolios/${portfolioId}`} className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white">
-              <span aria-hidden="true">←</span>
-              Volver
-            </Link>
+      <div className="page-container asset-detail-page">
+        {/* Encabezado directamente sobre el fondo: sin card */}
+        <div className="asset-detail-top">
+          <Link href={`/portfolios/${portfolioId}`} className="asset-detail-back">
+            <span aria-hidden="true">←</span>
+            Volver
+          </Link>
 
-            <div className="mt-4 flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-4 w-4 rounded-full" style={{ backgroundColor: color }} />
-                  <h1 className="text-2xl font-semibold text-white">{openPosition.name}</h1>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <p className="text-sm text-slate-400">{openPosition.symbol}</p>
-                  <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${getAssetTypeChipClass(openPosition.type)}`}>
-                    {assetTypeLabels[openPosition.type]}
-                  </span>
-                </div>
-              </div>
+          <div className="asset-detail-heading">
+            <span className="asset-detail-dot" style={{ backgroundColor: color }} />
+            <h1 className="asset-detail-name">{openPosition.name}</h1>
+            <p className="asset-detail-symbol">{openPosition.symbol}</p>
+            <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${getAssetTypeChipClass(openPosition.type)}`}>
+              {assetTypeLabels[openPosition.type]}
+            </span>
+          </div>
+        </div>
+
+        {/* Resumen financiero: un único bloque plano, sin card anidada */}
+        <section className="card portfolio-detail-section asset-detail-summary" aria-label="Resumen del activo">
+          <div className="asset-detail-primary">
+            <div className="asset-detail-hero">
+              <p className="asset-detail-label">Valor actual</p>
+              <p className="asset-detail-hero-value">{formatCurrencyByVisibility(openPosition.marketValue)}</p>
             </div>
-
-            <div className="mt-5 rounded-2xl border border-slate-700/80 bg-[#111c30] p-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div>
-                  <p className="text-sm text-slate-400">Valor actual</p>
-                  <p className="mt-1 text-xl font-semibold text-white">{formatCurrencyByVisibility(openPosition.marketValue)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400">Ganancia</p>
-                  <p className={`mt-1 text-xl font-semibold ${openPosition.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {formatSignedCurrency(openPosition.pnl, openPosition.currency)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400">Rendimiento</p>
-                  <p className={`mt-1 text-xl font-semibold ${openPosition.pnlPct >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {formatPercent(openPosition.pnlPct)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-700/70 pt-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-slate-400">Cantidad</p>
-                  <p className="mt-1 text-sm text-slate-100">{formatNumber(openPosition.quantity)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Precio actual</p>
-                  <p className="mt-1 text-sm text-slate-100">{formatCurrencyByVisibility(openPosition.currentPrice)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Precio promedio</p>
-                  <p className="mt-1 text-sm text-slate-100">{formatCurrencyByVisibility(openPosition.avgBuyPrice)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Valor invertido</p>
-                  <p className="mt-1 text-sm text-slate-100">{formatCurrencyByVisibility(openPosition.investedValue)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">% del portfolio</p>
-                  <p className="mt-1 text-sm text-slate-100">{formatUnsignedPercent(openPosition.sharePct)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Tipo</p>
-                  <p className="mt-1 text-sm text-slate-100">{assetTypeLabels[openPosition.type]}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Fecha primera compra</p>
-                  <p className="mt-1 text-sm text-slate-100">{formatIsoDate(openPosition.firstBuyDate)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">Fecha última compra</p>
-                  <p className="mt-1 text-sm text-slate-100">{formatIsoDate(openPosition.lastBuyDate)}</p>
-                </div>
-              </div>
+            <div>
+              <p className="asset-detail-label">Ganancia</p>
+              <p className={`asset-detail-metric ${isPositive ? "asset-detail-metric--up" : "asset-detail-metric--down"}`}>
+                {formatSignedCurrency(openPosition.pnl, openPosition.currency)}
+              </p>
+            </div>
+            <div>
+              <p className="asset-detail-label">Rendimiento</p>
+              <p className={`asset-detail-metric ${isPositive ? "asset-detail-metric--up" : "asset-detail-metric--down"}`}>
+                {formatPercent(openPosition.pnlPct)}
+              </p>
             </div>
           </div>
+
+          <dl className="asset-detail-secondary">
+            <div>
+              <dt>Cantidad</dt>
+              <dd>{formatNumber(openPosition.quantity)}</dd>
+            </div>
+            <div>
+              <dt>Precio actual</dt>
+              <dd>{formatCurrencyByVisibility(openPosition.currentPrice)}</dd>
+            </div>
+            <div>
+              <dt>Precio promedio</dt>
+              <dd>{formatCurrencyByVisibility(openPosition.avgBuyPrice)}</dd>
+            </div>
+            <div>
+              <dt>Valor invertido</dt>
+              <dd>{formatCurrencyByVisibility(openPosition.investedValue)}</dd>
+            </div>
+            <div>
+              <dt>% del portfolio</dt>
+              <dd>{formatUnsignedPercent(openPosition.sharePct)}</dd>
+            </div>
+            <div>
+              <dt>Primera compra</dt>
+              <dd>{formatIsoDate(openPosition.firstBuyDate)}</dd>
+            </div>
+            <div>
+              <dt>Última compra</dt>
+              <dd>{formatIsoDate(openPosition.lastBuyDate)}</dd>
+            </div>
+          </dl>
         </section>
 
         <PortfolioTransactionsTable
@@ -151,6 +142,7 @@ export default function PortfolioV3AssetDetailClient({
           searchPlaceholder="Buscar en transacciones"
           lockedAssetId={openPosition.assetId}
           hideSymbolColumn
+          sectionClassName="asset-tx-section"
           onPortfolioUpdated={setPortfolio}
         />
       </div>

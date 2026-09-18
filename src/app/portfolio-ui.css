@@ -5,25 +5,25 @@
  */
 
 :root {
-  --portfolio-page-background: #070d1c;
-  --portfolio-surface: #0e172a;
-  --portfolio-surface-strong: #111c30;
-  --portfolio-surface-action: #0f172a;
-  --portfolio-surface-hover: #162238;
-  --portfolio-border: rgb(51 65 85 / 0.8);
-  --portfolio-border-hover: #475569;
-  --portfolio-text: #fff;
-  --portfolio-text-muted: #94a3b8;
+  --portfolio-page-background: #080d1a;
+  --portfolio-surface: #0f172a;
+  --portfolio-surface-strong: #162033;
+  --portfolio-surface-action: #162033;
+  --portfolio-surface-hover: #1e293b;
+  --portfolio-border: #26344d;
+  --portfolio-border-hover: #3b4d6b;
+  --portfolio-text: #f8fafc;
+  --portfolio-text-muted: #cbd5e1;
   --portfolio-text-subtle: #64748b;
-  --portfolio-accent: #3b82f6;
-  --portfolio-accent-hover: #2563eb;
+  --portfolio-accent: #6366f1;
+  --portfolio-accent-hover: #818cf8;
 }
 
 .portfolio-page {
   min-height: 100vh;
   padding: 1.5rem 1rem;
   background: var(--portfolio-page-background);
-  color: #f1f5f9;
+  color: #f8fafc;
 }
 
 .portfolio-shell {
@@ -52,7 +52,7 @@
 
 .portfolio-eyebrow {
   margin: 0;
-  color: #38bdf8;
+  color: #818cf8;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.28em;
@@ -133,7 +133,7 @@
   border: 0;
   background: var(--portfolio-accent);
   color: #fff;
-  box-shadow: 0 1px 2px rgb(14 165 233 / 0.2);
+  box-shadow: 0 1px 2px rgb(99 102 241 / 0.35);
 }
 
 .portfolio-button-primary:hover:not(:disabled) {
@@ -142,7 +142,7 @@
 
 .portfolio-button-secondary,
 .portfolio-control {
-  border: 1px solid #334155;
+  border: 1px solid var(--portfolio-border);
   background: var(--portfolio-surface-strong);
   color: #cbd5e1;
 }
@@ -157,7 +157,7 @@
 .portfolio-button-primary:focus-visible,
 .portfolio-button-secondary:focus-visible,
 .portfolio-control:focus-visible {
-  outline: 2px solid rgb(14 165 233 / 0.6);
+  outline: 2px solid rgb(129 140 248 / 0.65);
   outline-offset: 2px;
 }
 
@@ -178,7 +178,7 @@
 }
 
 .portfolio-empty-state {
-  border: 1px dashed #334155;
+  border: 1px dashed var(--portfolio-border);
   border-radius: 22px;
   padding: 3rem 1.5rem;
   background: var(--portfolio-surface);
@@ -226,7 +226,7 @@
   min-height: 100vh;
   padding: 1.5rem 1rem;
   background: var(--portfolio-page-background);
-  color: #f1f5f9;
+  color: #f8fafc;
 }
 
 .page-container {
@@ -273,6 +273,19 @@
   gap: 0.75rem;
 }
 
+/* Los hijos de contenedores flex/grid pueden encogerse: evita que un
+   contenido largo (selects, pre, nombres) ensanche la pagina en mobile. */
+.page-container > *,
+.card-content--list > *,
+.card-item,
+.card-header > * {
+  min-width: 0;
+}
+
+select.control {
+  max-width: 100%;
+}
+
 .card-title {
   margin: 0;
   color: var(--portfolio-text);
@@ -309,7 +322,7 @@
 
 .eyebrow {
   margin: 0;
-  color: #38bdf8;
+  color: #818cf8;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.28em;
@@ -327,7 +340,7 @@
   border: 0;
   background: var(--portfolio-accent);
   color: #fff;
-  box-shadow: 0 1px 2px rgb(14 165 233 / 0.2);
+  box-shadow: 0 1px 2px rgb(99 102 241 / 0.35);
 }
 
 .button-primary:hover:not(:disabled) {
@@ -335,7 +348,7 @@
 }
 
 .button-secondary {
-  border: 1px solid #334155;
+  border: 1px solid var(--portfolio-border);
   background: var(--portfolio-surface-strong);
   color: #cbd5e1;
 }
@@ -347,7 +360,7 @@
 }
 
 .control {
-  border: 1px solid #334155;
+  border: 1px solid var(--portfolio-border);
   border-radius: 0.75rem;
   background: var(--portfolio-surface-strong);
   color: #cbd5e1;
@@ -356,12 +369,12 @@
 }
 
 .control:focus-visible {
-  outline: 2px solid rgb(14 165 233 / 0.6);
+  outline: 2px solid rgb(129 140 248 / 0.65);
   outline-offset: 2px;
 }
 
 .button:focus-visible {
-  outline: 2px solid rgb(14 165 233 / 0.6);
+  outline: 2px solid rgb(129 140 248 / 0.65);
   outline-offset: 2px;
 }
 
@@ -497,11 +510,11 @@
 }
 
 .home-value-positive {
-  color: rgb(52 211 153);
+  color: var(--gain-positive);
 }
 
 .home-value-negative {
-  color: rgb(251 113 133);
+  color: var(--gain-negative);
 }
 
 .home-value-neutral {
@@ -551,7 +564,7 @@
 }
 
 .home-link-card:focus-visible {
-  outline: 2px solid rgb(14 165 233 / 0.6);
+  outline: 2px solid rgb(129 140 248 / 0.65);
   outline-offset: 2px;
 }
 
@@ -603,7 +616,7 @@
   margin-top: 0.5rem;
   height: 0.5rem;
   border-radius: 999px;
-  background: rgb(30 41 59 / 0.9);
+  background: #1e293b;
   overflow: hidden;
 }
 
@@ -613,7 +626,7 @@
 }
 
 .home-progress-fill--sky {
-  background: #0ea5e9;
+  background: #6366f1;
 }
 
 .home-progress-fill--emerald {
@@ -708,9 +721,9 @@
 .home-currency-switch {
   display: inline-flex;
   gap: 0.25rem;
-  border: 1px solid rgb(51 65 85 / 0.9);
+  border: 1px solid var(--portfolio-border);
   border-radius: 999px;
-  background: rgb(14 23 42 / 0.7);
+  background: var(--portfolio-surface-strong);
   padding: 0.2rem;
 }
 
@@ -728,15 +741,15 @@
 }
 
 .home-currency-switch-btn--active {
-  background: #0ea5e9;
+  background: #6366f1;
   color: #fff;
 }
 
 .home-currency-badge {
   display: inline-flex;
-  border: 1px solid rgb(51 65 85 / 0.9);
+  border: 1px solid var(--portfolio-border);
   border-radius: 999px;
-  background: rgb(30 41 59 / 0.6);
+  background: var(--portfolio-surface-strong);
   padding: 0.1rem 0.6rem;
   color: #cbd5e1;
   font-size: 11px;
@@ -767,7 +780,7 @@
 .home-hero-divider {
   width: 1px;
   height: 1.25rem;
-  background: rgb(51 65 85 / 0.9);
+  background: var(--portfolio-border);
 }
 
 .home-hero-side {
@@ -780,9 +793,9 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  border: 1px solid rgb(51 65 85 / 0.45);
+  border: 1px solid var(--portfolio-border);
   border-radius: 16px;
-  background: rgb(30 41 59 / 0.45);
+  background: var(--portfolio-surface-strong);
   padding: 0.75rem 1rem;
 }
 
@@ -794,8 +807,8 @@
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 14px;
-  background: rgb(30 41 59 / 0.8);
-  color: #38bdf8;
+  background: var(--portfolio-surface-hover);
+  color: #818cf8;
 }
 
 .home-hero-mini-copy {
@@ -973,7 +986,7 @@
   margin-top: 0.4rem;
   height: 0.5rem;
   border-radius: 999px;
-  background: rgb(30 41 59 / 0.9);
+  background: #1e293b;
   overflow: hidden;
 }
 
@@ -1132,9 +1145,9 @@
   min-width: 13rem;
   flex-direction: column;
   gap: 0.25rem;
-  border: 1px solid rgb(51 65 85 / 0.9);
+  border: 1px solid var(--portfolio-border);
   border-radius: 0.75rem;
-  background: rgb(14 23 42 / 0.98);
+  background: rgb(15 23 42 / 0.98);
   padding: 0.5rem;
   box-shadow: 0 0.75rem 2rem rgb(2 6 23 / 0.6);
 }
@@ -1149,7 +1162,7 @@
 }
 
 .assets-type-dropdown-option:hover {
-  background: rgb(30 41 59 / 0.7);
+  background: var(--portfolio-surface-hover);
 }
 
 .assets-type-dropdown-count {
@@ -1160,25 +1173,25 @@
 
 .assets-type-dropdown-clear {
   margin-top: 0.25rem;
-  border-top: 1px solid rgb(30 41 59 / 0.8);
+  border-top: 1px solid var(--portfolio-border);
   padding-top: 0.5rem;
   background: none;
   border-left: 0;
   border-right: 0;
   border-bottom: 0;
-  color: rgb(56 189 248);
+  color: #818cf8;
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
 }
 
 .assets-type-dropdown-clear:hover {
-  color: rgb(125 211 252);
+  color: #a5b4fc;
 }
 
 .assets-list {
   margin-top: 1.5rem;
-  border-top: 1px solid rgb(30 41 59 / 0.8);
+  border-top: 1px solid var(--portfolio-border);
 }
 
 .assets-row {
@@ -1186,7 +1199,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem 0;
-  border-bottom: 1px solid rgb(30 41 59 / 0.8);
+  border-bottom: 1px solid var(--portfolio-border);
 }
 
 .assets-row:last-child {
@@ -1263,7 +1276,7 @@
 }
 
 .assets-badge--live {
-  background: rgb(16 185 129 / 0.1);
+  background: rgb(16 185 129 / 0.14);
   color: rgb(110 231 183);
 }
 
@@ -1293,11 +1306,11 @@
 }
 
 .assets-row-action.button-secondary {
-  color: rgb(56 189 248);
+  color: #818cf8;
 }
 
 .assets-row-action-delete.button-secondary {
-  color: rgb(251 113 133);
+  color: #f43f5e;
 }
 
 .assets-row-action-delete.button-secondary:hover:not(:disabled) {
@@ -1400,7 +1413,7 @@
 }
 
 .modal-close:hover {
-  background: rgb(30 41 59 / 0.9);
+  background: var(--portfolio-surface-hover);
   color: var(--portfolio-text);
 }
 
@@ -1425,7 +1438,7 @@
 
 .modal-field {
   display: block;
-  color: rgb(226 232 240);
+  color: #cbd5e1;
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -1483,11 +1496,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  border: 1px solid #334155;
+  border: 1px solid var(--portfolio-border);
   border-radius: 1rem;
   background: var(--portfolio-surface-strong);
   padding: 0.75rem 1rem;
-  color: rgb(226 232 240);
+  color: #cbd5e1;
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -1548,7 +1561,7 @@ body:has(.modal-backdrop) {
 .segmented-button--active {
   background: var(--portfolio-accent);
   color: #fff;
-  box-shadow: 0 1px 2px rgb(14 165 233 / 0.2);
+  box-shadow: 0 1px 2px rgb(99 102 241 / 0.35);
 }
 
 .portfolio-detail-page {
@@ -1684,7 +1697,7 @@ body:has(.modal-backdrop) {
 .portfolio-detail-panel {
   border: 1px solid var(--portfolio-border);
   border-radius: 1rem;
-  background: #0b1220;
+  background: var(--portfolio-surface-strong);
   padding: 1rem;
 }
 
@@ -1812,7 +1825,7 @@ body:has(.modal-backdrop) {
 .auth-mode-button--active {
   background: var(--portfolio-accent);
   color: #fff;
-  box-shadow: 0 1px 2px rgb(14 165 233 / 0.2);
+  box-shadow: 0 1px 2px rgb(99 102 241 / 0.35);
 }
 
 .auth-form {
@@ -2101,5 +2114,620 @@ body:has(.modal-backdrop) {
 
   .auth-card {
     padding: 2rem;
+  }
+}
+
+/* Valores de metricas con contraste por tema (reemplaza variantes dark:). */
+.metric-value {
+  color: var(--portfolio-text);
+}
+
+.metric-value--positive {
+  color: var(--gain-positive);
+}
+
+.metric-value--negative {
+  color: var(--gain-negative);
+}
+
+/* Tema claro: blanco + celeste/azul de marca. El oscuro queda en :root. */
+:root {
+  --gain-positive: #10b981;
+  --gain-negative: #f43f5e;
+}
+
+[data-theme="light"] {
+  --portfolio-page-background: #f5f7fb;
+  --portfolio-surface: #ffffff;
+  --portfolio-surface-strong: #f8fafc;
+  --portfolio-surface-action: #ffffff;
+  --portfolio-surface-hover: #e2e8f0;
+  --portfolio-border: #dbe3ee;
+  --portfolio-border-hover: #a5b4fc;
+  --portfolio-text: #0f172a;
+  --portfolio-text-muted: #475569;
+  --portfolio-text-subtle: #64748b;
+  --portfolio-accent: #4f46e5;
+  --portfolio-accent-hover: #4338ca;
+  --gain-positive: #059669;
+  --gain-negative: #dc2626;
+}
+
+[data-theme="light"] .portfolio-page,
+[data-theme="light"] .page {
+  color: #0f172a;
+}
+
+[data-theme="light"] .portfolio-eyebrow,
+[data-theme="light"] .eyebrow {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .portfolio-button-secondary,
+[data-theme="light"] .portfolio-control,
+[data-theme="light"] .button-secondary,
+[data-theme="light"] .control {
+  border-color: var(--portfolio-border);
+  background: #eef2f7;
+  color: #334155;
+}
+
+/* Controles puntuales sobre el gris reservado. */
+[data-theme="light"] .segmented-control,
+[data-theme="light"] .auth-mode-switch {
+  background: #eef2f7;
+}
+
+[data-theme="light"] .portfolio-button-secondary:hover:not(:disabled),
+[data-theme="light"] .portfolio-control:hover:not(:disabled),
+[data-theme="light"] .button-secondary:hover:not(:disabled) {
+  border-color: var(--portfolio-border-hover);
+  background: var(--portfolio-surface-hover);
+  color: #0f172a;
+}
+
+[data-theme="light"] .button-primary,
+[data-theme="light"] .portfolio-button-primary,
+[data-theme="light"] .segmented-button--active,
+[data-theme="light"] .auth-mode-button--active {
+  background: var(--portfolio-accent);
+  color: #fff;
+}
+
+[data-theme="light"] .button-primary:hover:not(:disabled),
+[data-theme="light"] .portfolio-button-primary:hover:not(:disabled) {
+  background: var(--portfolio-accent-hover);
+  color: #fff;
+}
+
+/* Sombras de acento en indigo (el base oscuro usa tinta celeste). */
+[data-theme="light"] .button-primary,
+[data-theme="light"] .portfolio-button-primary,
+[data-theme="light"] .segmented-button--active,
+[data-theme="light"] .auth-mode-button--active {
+  box-shadow: 0 1px 2px rgb(79 70 229 / 0.3);
+}
+
+/* Sombras de elevacion sobrias sobre superficies blancas. */
+[data-theme="light"] .auth-card {
+  box-shadow: 0 20px 40px rgb(15 23 42 / 0.1);
+}
+
+[data-theme="light"] .home-value-positive {
+  color: var(--gain-positive);
+}
+
+[data-theme="light"] .home-value-negative {
+  color: var(--gain-negative);
+}
+
+[data-theme="light"] .home-hero-eyebrow,
+[data-theme="light"] .home-hero-mini-label,
+[data-theme="light"] .home-assets-row-top {
+  color: var(--portfolio-text-muted);
+}
+
+[data-theme="light"] .home-hero-value,
+[data-theme="light"] .home-hero-mini-value,
+[data-theme="light"] .home-donut-value,
+[data-theme="light"] .home-donut-label {
+  color: var(--portfolio-text);
+}
+
+[data-theme="light"] .home-hero-mini {
+  border-color: var(--portfolio-border);
+  background: var(--portfolio-surface-strong);
+}
+
+[data-theme="light"] .home-hero-icon {
+  background: var(--portfolio-surface-hover);
+  color: #4f46e5;
+}
+
+[data-theme="light"] .home-hero-divider {
+  background: var(--portfolio-border);
+}
+
+[data-theme="light"] .home-currency-switch {
+  border-color: var(--portfolio-border);
+  background: #eef2f7;
+}
+
+[data-theme="light"] .home-currency-switch-btn {
+  color: var(--portfolio-text-muted);
+}
+
+/* Mayor especificidad que la regla anterior: el seleccionado va en blanco. */
+[data-theme="light"] .home-currency-switch .home-currency-switch-btn--active {
+  background: var(--portfolio-accent);
+  color: #fff;
+}
+
+[data-theme="light"] .home-currency-badge {
+  border-color: var(--portfolio-border);
+  background: var(--portfolio-surface-strong);
+  color: #334155;
+}
+
+[data-theme="light"] .home-progress-track,
+[data-theme="light"] .home-assets-bar {
+  background: #e2e8f0;
+}
+
+/* Barras y donuts en claro: indigo en lugar de celeste. */
+[data-theme="light"] .home-progress-fill--sky {
+  background: #4f46e5;
+}
+
+/* El SVG del donut usa atributos stroke inline (pensados para oscuro);
+   la propiedad CSS stroke los sobrescribe solo en tema claro. */
+[data-theme="light"] .home-donut-wrap circle:first-child {
+  stroke: #e2e8f0;
+}
+
+[data-theme="light"] .home-donut-wrap circle:last-child {
+  stroke: #4f46e5;
+}
+
+[data-theme="light"] .assets-badge--live {
+  background: rgb(5 150 105 / 0.12);
+  color: #047857;
+}
+
+[data-theme="light"] .assets-badge--local {
+  background: rgb(180 83 9 / 0.12);
+  color: #b45309;
+}
+
+[data-theme="light"] .assets-type-dropdown-panel {
+  border-color: var(--portfolio-border);
+  background: #ffffff;
+  box-shadow: 0 0.75rem 2rem rgb(15 23 42 / 0.12);
+}
+
+[data-theme="light"] .assets-type-dropdown-option:hover {
+  background: var(--portfolio-surface-hover);
+}
+
+[data-theme="light"] .assets-type-dropdown-clear {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .assets-type-dropdown-clear:hover {
+  color: #4338ca;
+}
+
+[data-theme="light"] .assets-list {
+  margin-top: 1rem;
+  border-top-color: transparent;
+}
+
+[data-theme="light"] .assets-row {
+  border-bottom-color: var(--portfolio-border);
+}
+
+[data-theme="light"] .assets-row-action.button-secondary {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .assets-row-action-delete.button-secondary {
+  color: #dc2626;
+}
+
+[data-theme="light"] .assets-row-action-delete.button-secondary:hover:not(:disabled) {
+  border-color: rgb(220 38 38 / 0.5);
+  background: rgb(220 38 38 / 0.08);
+}
+
+[data-theme="light"] .modal-backdrop {
+  background: rgb(15 23 42 / 0.45);
+}
+
+[data-theme="light"] .modal {
+  box-shadow: 0 24px 50px rgb(15 23 42 / 0.18);
+}
+
+[data-theme="light"] .modal-field,
+[data-theme="light"] .modal-toggle-row {
+  color: var(--portfolio-text);
+}
+
+[data-theme="light"] .modal-toggle-row {
+  border-color: var(--portfolio-border);
+  background: #eef2f7;
+}
+
+[data-theme="light"] .modal-close:hover {
+  background: var(--portfolio-surface-hover);
+  color: var(--portfolio-text);
+}
+
+[data-theme="light"] .auth-field {
+  color: #334155;
+}
+
+[data-theme="light"] .portfolio-status-error,
+[data-theme="light"] .alert-error {
+  border-color: rgb(220 38 38 / 0.3);
+  background: rgb(220 38 38 / 0.08);
+  color: #b91c1c;
+}
+
+[data-theme="light"] .alert-success {
+  border-color: rgb(5 150 105 / 0.35);
+  background: rgb(5 150 105 / 0.1);
+  color: #047857;
+}
+
+[data-theme="light"] .portfolio-empty-state {
+  border-color: var(--portfolio-border);
+}
+
+[data-theme="light"] .portfolio-detail-panel {
+  background: var(--portfolio-surface-strong);
+}
+
+[data-theme="light"] .portfolio-button-primary:focus-visible,
+[data-theme="light"] .portfolio-button-secondary:focus-visible,
+[data-theme="light"] .portfolio-control:focus-visible,
+[data-theme="light"] .button:focus-visible,
+[data-theme="light"] .control:focus-visible,
+[data-theme="light"] .home-link-card:focus-visible {
+  outline-color: rgb(99 102 241 / 0.55);
+}
+
+@media (max-width: 639px) {
+  [data-theme="light"] .modal-actions {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0), rgb(255 255 255 / 0.92) 28%, rgb(255 255 255 / 1) 100%);
+  }
+}
+
+/* Segunda iteracion Light: menos "cajas grises", mas compacto y aireado. */
+
+/* Ritmo vertical compacto */
+[data-theme="light"] .portfolio-shell,
+[data-theme="light"] .page-container {
+  gap: 0.75rem;
+}
+
+[data-theme="light"] .home-page {
+  gap: 1rem;
+}
+
+[data-theme="light"] .portfolio-detail-page {
+  gap: 1.25rem;
+}
+
+/* Hero "Valor actual" compacto (~20-25% menos alto) */
+[data-theme="light"] .home-hero-card {
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+[data-theme="light"] .home-hero-value {
+  font-size: 1.65rem;
+}
+
+[data-theme="light"] .home-hero-sub {
+  margin-top: 0.4rem;
+  font-size: 1rem;
+}
+
+[data-theme="light"] .home-hero-side {
+  gap: 0.5rem;
+}
+
+[data-theme="light"] .home-hero-mini {
+  padding: 0.6rem 0.8rem;
+}
+
+[data-theme="light"] .home-hero-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 12px;
+}
+
+[data-theme="light"] .home-hero-mini-value {
+  font-size: 0.95rem;
+}
+
+@media (min-width: 768px) {
+  [data-theme="light"] .home-hero-card {
+    padding-top: 3rem;
+  }
+
+  [data-theme="light"] .home-hero-value {
+    font-size: 2rem;
+  }
+}
+
+/* Donuts: aprovechar el ancho (sin filas huerfanas), mas chicos, valores protagonistas */
+[data-theme="light"] .home-donut-wrap svg {
+  width: 52px;
+  height: 52px;
+}
+
+[data-theme="light"] .home-donut-label {
+  font-size: 0.8rem;
+}
+
+[data-theme="light"] .home-donut-value {
+  font-size: 1.05rem;
+}
+
+@media (min-width: 640px) {
+  [data-theme="light"] .home-donut-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr));
+  }
+}
+
+/* Detalle del activo: menos aire entre Volver, nombre y panel */
+[data-theme="light"] .portfolio-detail-section {
+  padding: 0.875rem;
+}
+
+[data-theme="light"] .portfolio-detail-section .card-content > a:first-child + div {
+  margin-top: 0.75rem;
+}
+
+[data-theme="light"] .portfolio-detail-section .mt-5 {
+  margin-top: 1rem;
+}
+
+@media (min-width: 640px) {
+  [data-theme="light"] .portfolio-detail-section {
+    padding: 1.25rem;
+  }
+
+  [data-theme="light"] .portfolio-detail-hero {
+    padding: 1.5rem;
+  }
+}
+
+/*
+ * Tema oscuro "Dark Slate & Indigo". Solo afecta a [data-theme="dark"];
+ * el Light Mode queda intacto.
+ */
+
+/* Donut del home: relleno indigo en lugar de celeste. */
+[data-theme="dark"] .home-donut-wrap circle:last-child {
+  stroke: #6366f1;
+}
+
+/* Estados focus visibles unificados en indigo (sin bordes blancos fuertes). */
+[data-theme="dark"] .home-link-card:focus-visible,
+[data-theme="dark"] .home-donut-card:focus-visible,
+[data-theme="dark"] .home-gain-card:focus-visible,
+[data-theme="dark"] .home-gain-row:focus-visible,
+[data-theme="dark"] .home-currency-switch-btn:focus-visible,
+[data-theme="dark"] .segmented-button:focus-visible,
+[data-theme="dark"] .auth-mode-button:focus-visible {
+  outline: 2px solid rgb(129 140 248 / 0.65);
+  outline-offset: 2px;
+}
+
+/*
+ * Ficha de activo: encabezado sobre el fondo (sin card), resumen en un
+ * único bloque plano con separadores sutiles y transacciones como único
+ * contenedor independiente debajo. Compacto, Dark Slate & Indigo.
+ */
+.asset-detail-page {
+  gap: 0.75rem;
+}
+
+.asset-detail-top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem 0.25rem 0;
+}
+
+.asset-detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: fit-content;
+  color: var(--portfolio-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.asset-detail-back:hover {
+  color: var(--portfolio-text);
+}
+
+.asset-detail-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.625rem;
+}
+
+.asset-detail-dot {
+  display: inline-flex;
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: 0 0 0.75rem;
+  border-radius: 999px;
+}
+
+.asset-detail-name {
+  margin: 0;
+  color: var(--portfolio-text);
+  font-size: 1.375rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.asset-detail-symbol {
+  margin: 0;
+  color: var(--portfolio-text-subtle);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.asset-detail-summary {
+  padding: 0.875rem 1rem;
+}
+
+.asset-detail-primary {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.asset-detail-label {
+  margin: 0;
+  color: var(--portfolio-text-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.asset-detail-hero-value {
+  margin: 0.2rem 0 0;
+  color: var(--portfolio-text);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.asset-detail-metric {
+  margin: 0.2rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.asset-detail-metric--up {
+  color: #34d399;
+}
+
+.asset-detail-metric--down {
+  color: #fb7185;
+}
+
+.asset-detail-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem 1rem;
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--portfolio-border);
+}
+
+.asset-detail-secondary > div {
+  min-width: 0;
+  margin: 0;
+}
+
+.asset-detail-secondary dt {
+  color: var(--portfolio-text-subtle);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.asset-detail-secondary dd {
+  margin: 0.15rem 0 0;
+  color: var(--portfolio-text);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  .asset-detail-summary {
+    padding: 1rem 1.25rem;
+  }
+
+  .asset-detail-secondary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Detalle de activo en mobile: metricas principales jerarquizadas
+ * y toolbar de transacciones apilada.
+ */
+@media (max-width: 639px) {
+  /* Valor actual a ancho completo y destacado; Ganancia y
+     Rendimiento en dos columnas compactas. */
+  .asset-detail-primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .asset-detail-hero {
+    grid-column: 1 / -1;
+  }
+
+  .asset-detail-hero-value {
+    font-size: 1.6rem;
+  }
+
+  .asset-detail-secondary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Transacciones: titulo + boton, buscador full-width, filtros en fila. */
+  .asset-tx-section .portfolio-detail-section-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 0.75rem;
+    row-gap: 0.5rem;
+  }
+
+  .asset-tx-section .portfolio-detail-toolbar {
+    display: contents;
+  }
+
+  .asset-tx-section .portfolio-detail-section-header > div:first-child {
+    order: 1;
+    min-width: 0;
+  }
+
+  .asset-tx-section .portfolio-detail-add-button {
+    order: 2;
+    justify-self: end;
+  }
+
+  .asset-tx-section .portfolio-detail-search {
+    order: 3;
+    grid-column: 1 / -1;
+  }
+
+  .asset-tx-section .portfolio-detail-search-input {
+    width: 100%;
+  }
+
+  .asset-tx-section .portfolio-detail-select {
+    order: 4;
+    width: 100%;
+    min-width: 0;
   }
 }

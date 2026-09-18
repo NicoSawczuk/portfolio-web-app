@@ -271,7 +271,7 @@ export default function TransactionsImportPanel({ portfolios }: TransactionsImpo
               id="import-portfolio"
               value={selectedPortfolioId}
               onChange={(event) => setSelectedPortfolioId(event.target.value)}
-              className="control h-10 flex-1 px-3 text-sm"
+              className="control h-10 min-w-0 max-w-full flex-1 px-3 text-sm"
             >
               {portfolios.map((portfolio) => (
                 <option key={portfolio.id} value={portfolio.id}>
@@ -313,7 +313,7 @@ export default function TransactionsImportPanel({ portfolios }: TransactionsImpo
               {importing ? "Importando..." : "Importar"}
             </button>
           </div>
-          {fileName ? <p className="mt-2 text-xs text-slate-400">Archivo: {fileName}</p> : null}
+          {fileName ? <p className="mt-2 break-all text-xs text-slate-400">Archivo: {fileName}</p> : null}
           <label className="mt-3 block text-sm font-medium text-slate-300" htmlFor="import-json-text">
             Contenido del JSON (también podés pegarlo acá)
           </label>

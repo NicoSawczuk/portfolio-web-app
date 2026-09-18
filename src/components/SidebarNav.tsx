@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function HomeIcon() {
   return (
@@ -65,12 +66,12 @@ export default function SidebarNav() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-700/70 bg-[#0b1220]/90 backdrop-blur-xl">
+    <header className="app-header sticky top-0 z-40 w-full backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen((value) => !value)}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 bg-[#111c30] text-slate-200 transition hover:bg-[#162238] focus:outline-none focus:ring-2 focus:ring-sky-500/60 lg:hidden"
+          className="header-button inline-flex h-11 w-11 items-center justify-center rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/60 lg:hidden"
           aria-label={isMobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={isMobileMenuOpen}
         >
@@ -88,17 +89,17 @@ export default function SidebarNav() {
         <Link
           href="/"
           onClick={closeMobileMenu}
-          className="absolute left-1/2 inline-flex -translate-x-1/2 items-center justify-center rounded-xl px-2 py-1.5 transition hover:bg-slate-800/80 lg:static lg:translate-x-0"
+          className="nav-link absolute left-1/2 inline-flex -translate-x-1/2 items-center justify-center rounded-xl px-2 py-1.5 lg:static lg:translate-x-0"
         >
           <img
             src="/logos/isotipo.svg"
             alt="Portfolio Hub"
             className="h-9 w-9 object-contain sm:h-10 sm:w-10 lg:hidden"
           />
-          <picture className="hidden lg:block">
-            <source srcSet="/logos/logo-dark.svg" media="(prefers-color-scheme: dark)" />
-            <img src="/logos/logo-light.svg" alt="Portfolio Hub" className="h-8 w-auto object-contain" />
-          </picture>
+          <span className="hidden lg:block">
+            <img src="/logos/logo-dark.svg" alt="Portfolio Hub" className="theme-logo--dark h-8 w-auto object-contain" />
+            <img src="/logos/logo-light.svg" alt="Portfolio Hub" className="theme-logo--light h-8 w-auto object-contain" />
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-2 lg:flex">
@@ -110,10 +111,8 @@ export default function SidebarNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                  isActive
-                    ? "bg-[#3b82f6] text-white shadow-sm shadow-blue-500/10"
-                    : "text-slate-300 hover:bg-[#111c30] hover:text-white"
+                className={`nav-link inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium ${
+                  isActive ? "nav-link--active shadow-sm shadow-blue-500/10" : ""
                 }`}
               >
                 <span className="inline-flex items-center justify-center">
@@ -125,19 +124,22 @@ export default function SidebarNav() {
           })}
         </nav>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="hidden rounded-xl border border-slate-700 bg-[#111c30] px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-[#162238] lg:inline-flex"
-        >
-          Cerrar sesión
-        </button>
+        <div className="hidden items-center gap-2 lg:flex">
+          <ThemeToggle className="header-button inline-flex h-[38px] w-[38px] items-center justify-center rounded-xl" />
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="header-button inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium"
+          >
+            Cerrar sesión
+          </button>
+        </div>
 
-        <div className="h-11 w-11 lg:hidden" aria-hidden="true" />
+        <ThemeToggle className="header-button inline-flex h-11 w-11 items-center justify-center rounded-xl lg:hidden" />
       </div>
 
       <div
-        className={`overflow-hidden border-t border-slate-700/70 bg-[#0b1220]/95 transition-all duration-200 ease-out lg:hidden ${
+        className={`mobile-menu overflow-hidden transition-all duration-200 ease-out lg:hidden ${
           isMobileMenuOpen ? "max-h-96" : "max-h-0"
         }`}
       >
@@ -152,10 +154,8 @@ export default function SidebarNav() {
                   key={item.href}
                   href={item.href}
                   onClick={closeMobileMenu}
-                  className={`inline-flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                    isActive
-                      ? "bg-[#3b82f6] text-white shadow-sm shadow-blue-500/10"
-                      : "text-slate-300 hover:bg-[#111c30] hover:text-white"
+                  className={`nav-link inline-flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${
+                    isActive ? "nav-link--active shadow-sm shadow-blue-500/10" : ""
                   }`}
                 >
                   <span className="inline-flex h-7 w-7 items-center justify-center text-lg leading-none">
@@ -169,7 +169,7 @@ export default function SidebarNav() {
           <button
             type="button"
             onClick={handleLogout}
-            className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-slate-700 bg-[#111c30] px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-[#162238]"
+            className="header-button mt-3 inline-flex w-full items-center justify-center rounded-xl px-3 py-2 text-sm font-medium"
           >
             Cerrar sesión
           </button>

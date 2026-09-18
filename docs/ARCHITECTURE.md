@@ -75,6 +75,12 @@ Important:
 - Financial calculations run in both server and client contexts depending on consumer.
 - Calculation files import only types and pure logic, so they are currently browser-compatible.
 
+## Theming
+
+- The active theme lives in `<html data-theme>` (`"light"` | `"dark"`, default `"dark"`).
+- `src/components/ThemeProvider.tsx` owns the state, persists it in `localStorage` under `portfolio-theme`, falls back to `prefers-color-scheme` and follows OS changes until the user picks a theme; an inline script in `src/app/layout.tsx` applies it pre-hydration. `src/components/ThemeToggle.tsx` is the header toggle.
+- Dark styling is hardcoded in components; light-mode remaps live in `src/app/globals.css` as `[data-theme="light"]` overrides. Tailwind v4 `divide-*` targets `:where(& > :not(:last-child))`, so overrides must use that shape (not the v3 `~` sibling selector) to also cover the first row.
+
 ## Backend Architecture
 
 API routes:

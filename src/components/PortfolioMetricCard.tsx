@@ -14,9 +14,9 @@ export default function PortfolioMetricCard({
   compact = false,
 }: PortfolioMetricCardProps) {
   const toneClasses = {
-    default: "text-slate-900 dark:text-slate-100",
-    positive: "text-emerald-600 dark:text-emerald-400",
-    negative: "text-rose-600 dark:text-rose-400",
+    default: "metric-value",
+    positive: "metric-value--positive",
+    negative: "metric-value--negative",
   }[tone];
 
   return (

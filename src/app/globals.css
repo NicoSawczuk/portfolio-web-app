@@ -3,18 +3,60 @@
 
 :root {
   color-scheme: dark;
-  --background: #070d1c;
+  --background: #080d1a;
   --foreground: #f8fafc;
-  --surface: #0e172a;
-  --surface-strong: #111c30;
-  --surface-hover: #162238;
-  --border: #24334d;
+  --surface: #0f172a;
+  --surface-strong: #162033;
+  --surface-hover: #1e293b;
+  --border: #26344d;
+  --border-hover: #3b4d6b;
   --muted: #94a3b8;
   --muted-strong: #64748b;
-  --accent: #3b82f6;
-  --accent-soft: rgba(59, 130, 246, 0.14);
-  --success: #22c55e;
-  --danger: #f87171;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+  --success: #10b981;
+  --danger: #f43f5e;
+  --header-bg: rgb(8 13 26 / 0.9);
+}
+
+/* El tema actual vive en <html data-theme>. :root es el fallback (dark). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #080d1a;
+  --foreground: #f8fafc;
+  --surface: #0f172a;
+  --surface-strong: #162033;
+  --surface-hover: #1e293b;
+  --border: #26344d;
+  --border-hover: #3b4d6b;
+  --muted: #94a3b8;
+  --muted-strong: #64748b;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+  --success: #10b981;
+  --danger: #f43f5e;
+  --header-bg: rgb(8 13 26 / 0.9);
+}
+
+/* Light: slate & indigo. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f5f7fb;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-strong: #f8fafc;
+  --surface-hover: #e2e8f0;
+  --border: #dbe3ee;
+  --muted: #475569;
+  --muted-strong: #64748b;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --success: #059669;
+  --danger: #dc2626;
+  --header-bg: rgb(255 255 255 / 0.9);
 }
 
 @theme inline {
@@ -36,10 +78,16 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 28%),
+    radial-gradient(circle at top, rgba(99, 102, 241, 0.1), transparent 28%),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(circle at top, rgba(79, 70, 229, 0.1), transparent 30%),
+    var(--background);
 }
 
 button,
@@ -50,5 +98,453 @@ select {
 }
 
 ::selection {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(99, 102, 241, 0.35);
+}
+
+:root[data-theme="light"] ::selection {
+  background: rgba(79, 70, 229, 0.22);
+}
+
+/* Header y navegacion: colores por variables, funcionan en ambos temas. */
+.app-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+}
+
+.header-button {
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  color: var(--muted);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.header-button:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+}
+
+.header-button:focus-visible {
+  outline: 2px solid rgb(129 140 248 / 0.65);
+  outline-offset: 2px;
+}
+
+.nav-link {
+  color: var(--muted);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.nav-link:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+}
+
+.nav-link--active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 2px rgb(99 102 241 / 0.35);
+}
+
+:root[data-theme="dark"] .nav-link:focus-visible {
+  outline: 2px solid rgb(129 140 248 / 0.65);
+  outline-offset: 2px;
+}
+
+.mobile-menu {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* Logo: se muestra la version acorde al tema (reemplaza prefers-color-scheme). */
+.theme-logo--dark {
+  display: none;
+}
+
+.theme-logo--light {
+  display: block;
+}
+
+:root[data-theme="dark"] .theme-logo--dark,
+:root:not([data-theme]) .theme-logo--dark {
+  display: block;
+}
+
+:root[data-theme="dark"] .theme-logo--light,
+:root:not([data-theme]) .theme-logo--light {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-logo--dark {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-logo--light {
+  display: block;
+}
+
+/*
+ * Tema claro: remapeo de las utilidades Tailwind hardcodeadas en oscuro.
+ * El selector con [data-theme="light"] suma especificidad y gana sin !important.
+ */
+
+/* Superficies */
+[data-theme="light"] .bg-\[\#070d1c\] {
+  background-color: var(--background);
+}
+
+[data-theme="light"] .bg-\[\#0b1220\],
+[data-theme="light"] .bg-\[\#0b1220\]\/90,
+[data-theme="light"] .bg-\[\#0b1220\]\/95 {
+  background-color: var(--header-bg);
+}
+
+[data-theme="light"] .bg-\[\#111c30\] {
+  background-color: var(--surface-strong);
+}
+
+/* Encabezado de tablas: sin banda de fondo; el limite con la primera fila
+   es la misma linea de 1px que separa al resto de las filas. */
+[data-theme="light"] thead.bg-\[\#111c30\] {
+  background-color: transparent;
+}
+
+[data-theme="light"] thead.bg-\[\#111c30\] th {
+  border-bottom: 1px solid #dbe3ee;
+}
+
+[data-theme="light"] .bg-\[\#0f172a\] {
+  background-color: #eef2f7;
+}
+
+[data-theme="light"] .bg-\[\#0e172a\] {
+  background-color: var(--surface);
+}
+
+[data-theme="light"] .bg-\[\#162238\] {
+  background-color: var(--surface-hover);
+}
+
+[data-theme="light"] .hover\:bg-\[\#111c30\]:hover {
+  background-color: var(--surface-hover);
+}
+
+[data-theme="light"] .hover\:bg-\[\#162238\]:hover {
+  background-color: var(--surface-hover);
+}
+
+[data-theme="light"] .bg-slate-800 {
+  background-color: #e2e8f0;
+}
+
+[data-theme="light"] .hover\:bg-slate-800\/80:hover {
+  background-color: #e2e8f0;
+}
+
+/* Bordes */
+[data-theme="light"] .border-slate-700,
+[data-theme="light"] .border-slate-700\/70,
+[data-theme="light"] .border-slate-700\/80 {
+  border-color: var(--border);
+}
+
+/* Tailwind v4 aplica el divisor como borde inferior a todos menos el último
+   (:where(& > :not(:last-child))); el selector cubre también la primera fila. */
+[data-theme="light"] .divide-slate-800 > :not(:last-child) {
+  border-color: #dbe3ee;
+}
+
+[data-theme="light"] .hover\:border-slate-500:hover,
+[data-theme="light"] .hover\:border-slate-500\/80:hover {
+  border-color: #a5b4fc;
+}
+
+/* Textos base */
+[data-theme="light"] .text-slate-100 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .text-slate-200 {
+  color: #1e293b;
+}
+
+[data-theme="light"] .text-slate-300 {
+  color: #334155;
+}
+
+[data-theme="light"] .text-slate-400 {
+  color: #475569;
+}
+
+[data-theme="light"] .text-slate-500 {
+  color: #64748b;
+}
+
+[data-theme="light"] .text-white {
+  color: #0f172a;
+}
+
+[data-theme="light"] .hover\:text-white:hover,
+[data-theme="light"] .hover\:text-slate-200:hover {
+  color: #0f172a;
+}
+
+/* Acentos de texto: indigo sobre blanco (chips y links). */
+[data-theme="light"] .text-sky-400 {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .hover\:text-sky-300:hover {
+  color: #4338ca;
+}
+
+[data-theme="light"] .text-sky-200 {
+  color: #3730a3;
+}
+
+[data-theme="light"] .text-sky-300 {
+  color: #4338ca;
+}
+
+[data-theme="light"] .text-rose-400 {
+  color: #dc2626;
+}
+
+[data-theme="light"] .text-rose-300 {
+  color: #dc2626;
+}
+
+[data-theme="light"] .hover\:text-rose-300:hover {
+  color: #be123c;
+}
+
+[data-theme="light"] .text-emerald-400 {
+  color: #059669;
+}
+
+/* Los porcentajes usan -300 en oscuro: en claro se unifican con el monto (-400). */
+[data-theme="light"] .text-emerald-300 {
+  color: #059669;
+}
+
+[data-theme="light"] .text-emerald-200 {
+  color: #047857;
+}
+
+[data-theme="light"] .text-amber-200 {
+  color: #b45309;
+}
+
+[data-theme="light"] .text-violet-200 {
+  color: #6d28d9;
+}
+
+[data-theme="light"] .text-indigo-200 {
+  color: #4338ca;
+}
+
+[data-theme="light"] .text-cyan-200 {
+  color: #0e7490;
+}
+
+/* Excepciones: texto blanco sobre fondos de acento (se mantienen blancos). */
+[data-theme="light"] .bg-\[\#3b82f6\] {
+  background-color: var(--accent);
+  color: #fff;
+}
+
+[data-theme="light"] .bg-\[\#3b82f6\].text-white {
+  color: #fff;
+}
+
+[data-theme="light"] .file\:bg-sky-600::file-selector-button {
+  background-color: #4f46e5;
+}
+
+/* Controles del header sobre superficie puntual. */
+[data-theme="light"] .header-button {
+  background-color: #eef2f7;
+}
+
+/* Estado activo: solo fondo indigo + texto blanco, sin bordes ni outlines. */
+[data-theme="light"] .nav-link--active {
+  outline: none;
+  border: 0;
+  background-color: #4f46e5;
+  color: #fff;
+  box-shadow: 0 1px 2px rgb(79 70 229 / 0.25);
+}
+
+/* Focus separado y sutil, tambien sobre el item activo. */
+[data-theme="light"] .nav-link:focus-visible {
+  outline: 2px solid rgb(99 102 241 / 0.55);
+  outline-offset: 2px;
+}
+
+[data-theme="light"] .header-button:focus-visible {
+  outline-color: rgb(99 102 241 / 0.55);
+}
+
+/* File input y bordes de acento en indigo. */
+[data-theme="light"] .hover\:file\:bg-sky-500:hover::file-selector-button {
+  background-color: #4338ca;
+}
+
+[data-theme="light"] .border-sky-500 {
+  border-color: #4f46e5;
+}
+
+/* Chips/filtros sky: tinta indigo suave en lugar de celeste. */
+[data-theme="light"] .bg-sky-400\/15,
+[data-theme="light"] .bg-sky-400\/12 {
+  background-color: rgba(79, 70, 229, 0.1);
+}
+
+[data-theme="light"] .border-sky-400\/40,
+[data-theme="light"] .border-sky-400\/30 {
+  border-color: rgba(79, 70, 229, 0.25);
+}
+
+/* Chip CEDEAR: tinta sutil sobria. */
+[data-theme="light"] .bg-cyan-400\/12 {
+  background-color: rgb(14 116 144 / 0.08);
+}
+
+[data-theme="light"] .border-cyan-400\/30 {
+  border-color: rgb(14 116 144 / 0.25);
+}
+
+/* Anillos de foco y sombras en indigo. */
+[data-theme="light"] .focus\:ring-sky-500\/60:focus,
+[data-theme="light"] .focus-visible\:ring-sky-500\/60:focus-visible {
+  --tw-ring-color: rgb(99 102 241 / 0.5);
+}
+
+[data-theme="light"] .shadow-blue-500\/10 {
+  --tw-shadow-color: rgb(79 70 229 / 0.15);
+}
+
+/*
+ * Tema oscuro "Dark Slate & Indigo": remapeo de utilidades Tailwind con
+ * predominio azul/cyan hacia indigo. Solo afecta a [data-theme="dark"];
+ * el Light Mode queda intacto.
+ */
+
+/* Superficies y bordes sutiles */
+[data-theme="dark"] .bg-\[\#111c30\] {
+  background-color: #162033;
+}
+
+[data-theme="dark"] .bg-\[\#162238\],
+[data-theme="dark"] .hover\:bg-\[\#162238\]:hover {
+  background-color: #1e293b;
+}
+
+[data-theme="dark"] .border-slate-700,
+[data-theme="dark"] .border-slate-700\/70,
+[data-theme="dark"] .border-slate-700\/80 {
+  border-color: #26344d;
+}
+
+[data-theme="dark"] .hover\:border-slate-500:hover,
+[data-theme="dark"] .hover\:border-slate-500\/80:hover {
+  border-color: #3b4d6b;
+}
+
+/* Links y acentos de texto: sky -> indigo */
+[data-theme="dark"] .text-sky-400 {
+  color: #818cf8;
+}
+
+[data-theme="dark"] .hover\:text-sky-300:hover {
+  color: #a5b4fc;
+}
+
+[data-theme="dark"] .text-sky-200 {
+  color: #c7d2fe;
+}
+
+[data-theme="dark"] .text-sky-300 {
+  color: #a5b4fc;
+}
+
+[data-theme="dark"] .border-sky-500 {
+  border-color: #6366f1;
+}
+
+/* Chips/filtros sky: fondo indigo suave */
+[data-theme="dark"] .bg-sky-400\/15,
+[data-theme="dark"] .bg-sky-400\/12 {
+  background-color: rgba(99, 102, 241, 0.14);
+}
+
+[data-theme="dark"] .border-sky-400\/40,
+[data-theme="dark"] .border-sky-400\/30 {
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+/* Chip CEDEAR (cyan): tinta sutil, sin brillo excesivo */
+[data-theme="dark"] .bg-cyan-400\/12 {
+  background-color: rgb(34 211 238 / 0.08);
+}
+
+[data-theme="dark"] .border-cyan-400\/30 {
+  border-color: rgb(34 211 238 / 0.22);
+}
+
+/* Ganancias y perdidas: verde #10b981 / rojo #f43f5e */
+[data-theme="dark"] .text-emerald-400 {
+  color: #10b981;
+}
+
+[data-theme="dark"] .text-emerald-300 {
+  color: #34d399;
+}
+
+[data-theme="dark"] .border-emerald-500\/30 {
+  border-color: rgb(16 185 129 / 0.35);
+}
+
+[data-theme="dark"] .bg-emerald-500\/10 {
+  background-color: rgb(16 185 129 / 0.12);
+}
+
+[data-theme="dark"] .text-rose-400 {
+  color: #f43f5e;
+}
+
+[data-theme="dark"] .text-rose-300 {
+  color: #fb7185;
+}
+
+[data-theme="dark"] .border-rose-500\/30 {
+  border-color: rgb(244 63 94 / 0.35);
+}
+
+[data-theme="dark"] .bg-rose-500\/10 {
+  background-color: rgb(244 63 94 / 0.12);
+}
+
+/* Controles, focos y sombras: indigo */
+[data-theme="dark"] .file\:bg-sky-600::file-selector-button {
+  background-color: #6366f1;
+}
+
+[data-theme="dark"] .hover\:file\:bg-sky-500:hover::file-selector-button {
+  background-color: #818cf8;
+}
+
+[data-theme="dark"] .bg-\[\#3b82f6\] {
+  background-color: #6366f1;
+}
+
+[data-theme="dark"] .focus\:ring-sky-500\/60:focus,
+[data-theme="dark"] .focus-visible\:ring-sky-500\/60:focus-visible {
+  --tw-ring-color: rgb(129 140 248 / 0.65);
+}
+
+[data-theme="dark"] .shadow-blue-500\/10 {
+  --tw-shadow-color: rgb(99 102 241 / 0.25);
+}
+
+[data-theme="dark"] .nav-link--active {
+  box-shadow: 0 1px 2px rgb(99 102 241 / 0.35);
 }
