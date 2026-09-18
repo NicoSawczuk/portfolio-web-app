@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Asset, Portfolio, TransactionType } from "@/lib/portfolio";
+import type { Asset, AssetCurrency, Portfolio, TransactionType } from "@/lib/portfolio";
+import { getAssetCurrency, getAssetCurrentPrice } from "@/lib/portfolio";
 import { formatCurrency } from "@/lib/portfolio-format";
 
 const assetTransactionTypes: Array<{ value: TransactionType; label: string }> = [
@@ -59,6 +60,7 @@ function isAssetTransactionType(type: TransactionType) {
 interface AddTransactionButtonProps {
   portfolioId: string;
   assets: Asset[];
+  portfolioCurrency?: AssetCurrency;
   onPortfolioUpdated: (next: Portfolio) => void;
   buttonClassName?: string;
 }
@@ -66,6 +68,7 @@ interface AddTransactionButtonProps {
 export default function AddTransactionButton({
   portfolioId,
   assets,
+  portfolioCurrency = "USD",
   onPortfolioUpdated,
   buttonClassName = "",
 }: AddTransactionButtonProps) {
@@ -76,15 +79,17 @@ export default function AddTransactionButton({
   const [assetSelectorQuery, setAssetSelectorQuery] = useState("");
 
   const sortedAssets = useMemo(() => {
-    return [...assets].sort((a, b) => {
-      const bySymbol = a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
-      if (bySymbol !== 0) {
-        return bySymbol;
-      }
+    return assets
+      .filter((asset) => getAssetCurrency(asset) === portfolioCurrency)
+      .sort((a, b) => {
+        const bySymbol = a.symbol.localeCompare(b.symbol, "es", { sensitivity: "base" });
+        if (bySymbol !== 0) {
+          return bySymbol;
+        }
 
-      return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
-    });
-  }, [assets]);
+        return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+      });
+  }, [assets, portfolioCurrency]);
 
   const selectableAssets = useMemo(() => {
     const query = normalizeSearchText(assetSelectorQuery);
@@ -273,7 +278,7 @@ export default function AddTransactionButton({
                       <option value="">Seleccioná un activo</option>
                       {selectableAssets.map((asset) => (
                         <option key={asset.id} value={asset.id}>
-                          {asset.symbol} - {asset.name} - {formatCurrency(asset.price)}
+                          {asset.symbol} - {asset.name} - {formatCurrency(getAssetCurrentPrice(asset), getAssetCurrency(asset))}
                         </option>
                       ))}
                     </select>
@@ -309,7 +314,7 @@ export default function AddTransactionButton({
                     </label>
 
                     <label className="modal-field">
-                      Precio
+                      Precio ({portfolioCurrency})
                       <input
                         type="text"
                         inputMode="decimal"
@@ -334,7 +339,7 @@ export default function AddTransactionButton({
                   </label>
 
                   <label className="modal-field">
-                    Monto
+                    Monto ({portfolioCurrency})
                     <input
                       type="text"
                       inputMode="decimal"

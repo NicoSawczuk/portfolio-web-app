@@ -1,3 +1,5 @@
+import type { AssetCurrency } from "@/lib/portfolio";
+
 interface PortfolioValuationCardProps {
   totalMarketValue: number;
   totalPnl: number;
@@ -5,15 +7,17 @@ interface PortfolioValuationCardProps {
   showAmounts: boolean;
   onToggleVisibility?: () => void;
   className?: string;
+  currency?: AssetCurrency;
+  marketValueByCurrency?: { USD: number; ARS: number };
 }
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number, currency: "USD" | "ARS" = "USD") {
   const formatter = new Intl.NumberFormat("de-DE", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
   });
   const prefix = value < 0 ? "-" : "";
-  return `${prefix}USD ${formatter.format(Math.abs(value))}`;
+  return `${prefix}${currency} ${formatter.format(Math.abs(value))}`;
 }
 
 function formatPercent(value: number) {
@@ -24,21 +28,21 @@ function formatPercent(value: number) {
   return `${value >= 0 ? "+" : "-"}${formatter.format(Math.abs(value * 100))}%`;
 }
 
-function formatSignedCurrency(value: number) {
+function formatSignedCurrency(value: number, currency: AssetCurrency = "USD") {
   const formatter = new Intl.NumberFormat("de-DE", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
   });
 
   if (value > 0) {
-    return `+USD ${formatter.format(value)}`;
+    return `+${currency} ${formatter.format(value)}`;
   }
 
   if (value < 0) {
-    return `-USD ${formatter.format(Math.abs(value))}`;
+    return `-${currency} ${formatter.format(Math.abs(value))}`;
   }
 
-  return `USD ${formatter.format(0)}`;
+  return `${currency} ${formatter.format(0)}`;
 }
 
 export default function PortfolioValuationCard({
@@ -48,9 +52,12 @@ export default function PortfolioValuationCard({
   showAmounts,
   onToggleVisibility,
   className,
+  currency = "USD",
+  marketValueByCurrency,
 }: PortfolioValuationCardProps) {
   const pnlPositive = totalPnl > 0;
   const pnlNegative = totalPnl < 0;
+  const showArsBreakdown = currency === "USD" && (marketValueByCurrency?.ARS ?? 0) > 0;
 
   const ArrowIcon = pnlPositive ? "↑" : pnlNegative ? "↓" : "→";
 
@@ -59,8 +66,15 @@ export default function PortfolioValuationCard({
       <div className="flex items-start justify-between gap-3 lg:text-right">
         <div className="min-w-0 lg:ml-auto lg:text-right">
           <p className="text-[1.6rem] font-bold leading-none tracking-[-0.04em] text-white sm:text-[1.9rem]">
-            {showAmounts ? formatCurrency(totalMarketValue) : "••••••"}
+            {showAmounts ? formatCurrency(totalMarketValue, currency) : "••••••"}
           </p>
+          {showArsBreakdown ? (
+            <p className="mt-1 text-xs font-medium text-slate-400">
+              {showAmounts
+                ? `Incluye ${formatCurrency(marketValueByCurrency?.ARS ?? 0, "ARS")} en CEDEARs`
+                : "••••••"}
+            </p>
+          ) : null}
         </div>
 
         {onToggleVisibility ? (
@@ -86,7 +100,7 @@ export default function PortfolioValuationCard({
             {ArrowIcon}
           </span>
           <span className={pnlPositive ? "text-emerald-400" : pnlNegative ? "text-rose-400" : "text-slate-300"}>
-            {showAmounts ? formatSignedCurrency(totalPnl) : "••••••"}
+            {showAmounts ? formatSignedCurrency(totalPnl, currency) : "••••••"}
           </span>
         </span>
         <span

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { readAssetBySymbol } from "@/lib/asset-db";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
+import { getAssetCurrency, getPortfolioCurrency } from "@/lib/portfolio";
 import type { Transaction, TransactionType } from "@/lib/portfolio";
 
 const PORTFOLIO_TRANSACTIONS_API_KEY = process.env.PORTFOLIO_TRANSACTIONS_API_KEY?.trim();
@@ -151,6 +152,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     if (!assetMetadata) {
       return errorResponse(`Activo no encontrado para el símbolo "${symbol}".`, 404);
+    }
+
+    if (getAssetCurrency(assetMetadata) !== getPortfolioCurrency(portfolio)) {
+      return errorResponse(
+        `El activo cotiza en ${getAssetCurrency(assetMetadata)} y el portfolio es en ${getPortfolioCurrency(portfolio)}.`,
+        400
+      );
     }
 
     const assetId = assetMetadata.id;

@@ -19,16 +19,16 @@ Source: `README.md`, `src/app/*`, `src/components/*`, `src/app/api/*`.
 
 Business intent from `AI Project Audit - Portfolio Web App.md`:
 
-- Track personal investments in stocks, ETFs and cryptocurrencies.
+- Track personal investments in stocks, ETFs, cryptocurrencies and CEDEARs.
 - Combine manually recorded transactions with current prices.
 - Calculate portfolio value, positions, returns, profit/loss and metrics.
 - Support cash balances for portfolios where deposits fund later purchases.
 
 Current implementation:
 
-- Supports asset types `stock`, `etf`, `crypto`, `bond`, `cash`, `other`.
+- Supports asset types `stock`, `etf`, `crypto`, `bond`, `cash`, `other`, `cedear`.
 - Records transactions of type `buy`, `sell`, `cash_in`, `cash_out`.
-- Uses global `assets.price` for current market values.
+- Uses the effective global asset price for current market values (`price_ars` in ARS for `cedear`, `price` in USD otherwise).
 - Calculates holdings, cash and P/L from transaction arrays at render/query time.
 
 ## Intended Users
@@ -55,7 +55,8 @@ UNKNOWN / REQUIRES CONFIRMATION:
 | Cash movements | `cash_in` and `cash_out` transactions. |
 | Portfolio metrics | Derived by `src/lib/portfolio-summary.ts`. |
 | Open/closed positions | Derived by `src/lib/portfolio-positions.ts`. |
-| Export | Client-side CSV/JSON from server-loaded portfolios/assets. |
+| Export | Client-side CSV/JSON from server-loaded portfolios/assets, with currency columns (`portfolio_currency`, `transaction_currency`, `asset_currency`, `asset_price_currency`, `asset_price_ars`). |
+| Home summary | Per-currency totals (`totalsByCurrency`, USD -> ARS) rendered in a single hero card with currency switch (`src/components/HomeHeroCard.tsx`). |
 | Integration | API-key-protected transaction ingestion endpoint. |
 
 ## Supported Investment Types
@@ -68,11 +69,13 @@ Confirmed type union: `src/lib/portfolio.ts`
 - `bond`
 - `cash`
 - `other`
+- `cedear`
 
 External live pricing is implemented only for:
 
 - `stock` and `etf` via Finnhub.
 - mapped `crypto` assets via CoinMarketCap.
+- `cedear` assets via BYMA (ARS, `price_ars`; invalid quotes never overwrite the stored price).
 
 ## Portfolio Concepts
 
@@ -82,6 +85,7 @@ Portfolio fields:
 - `ownerUserId`
 - `name`
 - `description`
+- `currency` (`USD`/`ARS`, set at creation; filters the portfolio list and gates buy/sell by asset currency)
 - `managesCash`
 - `createdAt`
 - `assets`
@@ -105,8 +109,8 @@ Current implementation:
 - `cash_out`: decreases cash balance and net contributions.
 - `buy`: decreases cash balance by `quantity * price`.
 - `sell`: increases cash balance by `quantity * price`.
-- Cash is shown as a synthetic holding with symbol `USD` and assetId `cash:<portfolio.id>`.
-- Cash is listed as the first open position (`Efectivo` / `USD`) in the portfolio detail when `managesCash` is true. The card is not clickable, its dot is always green, and open-position allocation (`sharePct`) is measured including cash.
+- Cash is shown as a synthetic holding with assetId `cash:<portfolio.id>` and the portfolio currency as symbol.
+- Cash is listed as the first open position (`Efectivo` / portfolio currency) in the portfolio detail when `managesCash` is true. The card is not clickable, its dot is always green, and open-position allocation (`sharePct`) is measured including cash.
 
 UNKNOWN / REQUIRES CONFIRMATION:
 

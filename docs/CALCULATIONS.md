@@ -13,7 +13,9 @@ This is a high-risk reference. Before modifying financial logic, inspect the imp
 
 ## Shared Assumptions In Current Code
 
-- Currency display is hard-coded to `USD`.
+- Currency display is `USD` by default and `ARS` for `cedear` assets (`getAssetCurrency()` in `src/lib/portfolio.ts`).
+- Asset current price is the effective price (`getAssetCurrentPrice()`): `price_ars` for `cedear`, `price` otherwise. Transaction prices are expected in the asset currency.
+- Aggregate totals (`totalMarketValue`, `totalOpenMarketValue`) are nominal sums across currencies; `marketValueByCurrency: { USD, ARS }` exposes the per-currency breakdown. FX conversion is not modeled.
 - Numeric math uses JavaScript `number`, not Decimal.
 - Transaction arrays are sorted by string `date` using `localeCompare`.
 - Expected date format is `YYYY-MM-DD`, but normal portfolio API does not strictly validate it.
@@ -73,7 +75,8 @@ Implementation:
 Formula:
 
 ```text
-currentPrice = assetById.get(assetId)?.price ?? 0
+currentPrice = getAssetCurrentPrice(assetById.get(assetId)) ?? 0
+  (price_ars for cedear, price otherwise)
 marketValue = quantity * currentPrice
 costBasis = quantity * avgBuyPrice
 pnl = marketValue - costBasis
@@ -82,7 +85,8 @@ pnlPct = costBasis > 0 ? pnl / costBasis : 0
 
 Currency:
 
-- Displayed as USD by UI formatters.
+- Holdings carry `currency` (`USD`/`ARS`); UI formatters take the holding currency.
+- `marketValueByCurrency` accumulates market value per currency.
 
 Consumers:
 
@@ -131,9 +135,10 @@ Synthetic holding:
 
 ```text
 assetId = cash:<portfolio.id>
-symbol = USD
+symbol = portfolio currency (USD/ARS)
 name = Efectivo
 type = cash
+currency = portfolio currency
 quantity = cashBalance
 avgBuyPrice = 1
 currentPrice = 1
@@ -169,9 +174,14 @@ Formula:
 
 ```text
 totalMarketValue = sum(holdingsList.marketValue)
+marketValueByCurrency = sum grouped by holding.currency
 ```
 
 If `managesCash=true`, `holdingsList` includes synthetic cash, so total market value includes cash.
+
+Note:
+
+- With CEDEAR holdings, `totalMarketValue` mixes USD and ARS nominally. Use `marketValueByCurrency` to tell them apart; the valuation card shows an "Incluye ARS … en CEDEARs" line when the ARS portion is non-zero.
 
 Consumers:
 
@@ -271,6 +281,7 @@ append { label: "Hoy", value: totalMarketValue }
 Important:
 
 - Historical chart values use current asset prices, not historical prices.
+- `calculatePortfolioPerformance()` accepts `{ includeChartPoints: false }` to skip the per-date rebuild; home and summary callers use it and only get `Inicio`/`Hoy` points.
 
 Potential issue:
 
@@ -287,7 +298,8 @@ Implementation:
 Formula:
 
 ```text
-marketValue = remaining quantity * current global asset price
+marketValue = remaining quantity * current effective asset price
+  (price_ars for cedear, price otherwise)
 investedValue = remaining quantity * avgBuyPrice
 pnl = marketValue - investedValue
 pnlPct = investedValue > 1e-8 ? pnl / investedValue : 0
@@ -302,7 +314,7 @@ Consumers:
 Cash position:
 
 - When `portfolio.managesCash` is true, a synthetic `cash` open position is prepended first, using the same balance source as the summary (`calculateCashTotals()` in `src/lib/portfolio-summary.ts`).
-- Fields mirror the summary synthetic holding: `assetId = cash:<portfolio.id>`, `symbol = USD`, `name = Efectivo`, `type = cash`, `avgBuyPrice = 1`, `currentPrice = 1`, `marketValue = investedValue = cashBalance`, `pnl = 0`, `pnlPct = 0`.
+- Fields mirror the summary synthetic holding: `assetId = cash:<portfolio.id>`, `symbol`/`currency` = portfolio currency, `name = Efectivo`, `type = cash`, `avgBuyPrice = 1`, `currentPrice = 1`, `marketValue = investedValue = cashBalance`, `pnl = 0`, `pnlPct = 0`.
 - It is included in `totalOpenMarketValue`, so `sharePct` of every open position is measured against value including cash.
 - `PortfolioV3MainClient` renders it first as a non-clickable card with a fixed green dot (`#10b981`); cash has no asset detail page.
 
@@ -363,6 +375,10 @@ cash transaction total = transaction.price
 asset transaction total = transaction.price * transaction.quantity
 ```
 
+Currency:
+
+- Displayed in the transaction asset currency (`ARS` for `cedear`, `USD` otherwise).
+
 Consumers:
 
 - Transaction table "Total" column.
@@ -371,19 +387,27 @@ Consumers:
 
 Implementation:
 
-- `src/app/page.tsx`
+- `src/app/page.tsx` (`getHomeViewData()`), hero in `src/components/HomeHeroCard.tsx`
 
-Formula:
+Formula (per portfolio currency; USD and ARS are never mixed):
 
 ```text
 portfolioPerformances = portfolios.map(calculatePortfolioPerformance)
-totalMarketValue = sum(performance.totalMarketValue)
-totalCostBasis = sum(performance.totalCostBasis)
-totalPnl = totalMarketValue - totalCostBasis
-totalPnlPct = totalCostBasis > 0 ? totalPnl / totalCostBasis : 0
+totalsByCurrency = group by performance.currency (sorted USD -> ARS):
+  totalMarketValue = sum(performance.totalMarketValue)
+  totalCostBasis = sum(performance.totalCostBasis)
+  totalPnl = totalMarketValue - totalCostBasis
+  totalPnlPct = totalCostBasis > 0 ? totalPnl / totalCostBasis : 0
+totalMarketByCurrency[currency] = totalMarketValue
 ```
+
+Home rendering:
+
+- Single hero card (`HomeHeroCard`, client component) with a USD/ARS switch when more than one currency exists (defaults to USD). It shows capital total, invertido total and ganancia total (value + percent) for the selected currency only.
+- `Inversion por portfolio` share is measured against `totalMarketByCurrency[currency]`, not a global total.
+- Section order: Inversion por portfolio -> Ganancias por portfolio -> Activos por portfolio.
 
 Consumers:
 
-- Home page cards and rankings.
+- Home page hero, distribution, gains ranking and asset breakdown.
 

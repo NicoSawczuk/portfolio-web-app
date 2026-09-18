@@ -1,24 +1,40 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Asset, Portfolio } from "@/lib/portfolio";
+import type { Asset, AssetCurrency, Portfolio } from "@/lib/portfolio";
+import { getAssetCurrency, getAssetCurrentPrice, getPortfolioCurrency } from "@/lib/portfolio";
 
 interface ExportRow {
   portfolioId: string;
   portfolioName: string;
   portfolioDescription: string;
   portfolioCreatedAt: string;
+  portfolioCurrency: AssetCurrency;
   transactionId: string;
   transactionType: string;
   transactionDate: string;
   transactionPrice: number;
+  transactionCurrency: AssetCurrency;
   transactionQuantity: number | "";
   transactionNotes: string;
   assetId: string;
   assetSymbol: string;
   assetName: string;
   assetType: string;
+  assetCurrency: AssetCurrency | "";
   assetPrice: number;
+  assetPriceCurrency: AssetCurrency | "";
+  assetPriceArs: number | "";
+}
+
+function getExportTransactionCurrency(
+  transaction: { assetType?: Asset["type"]; type: string },
+  portfolioCurrency: AssetCurrency
+): AssetCurrency {
+  if ((transaction.type === "buy" || transaction.type === "sell") && transaction.assetType) {
+    return getAssetCurrency(transaction.assetType);
+  }
+  return portfolioCurrency;
 }
 
 function escapeCsv(value: string | number | undefined) {
@@ -48,25 +64,38 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
 
   const rows = useMemo<ExportRow[]>(() => {
     return selectedPortfolios.flatMap((portfolio) => {
+      const portfolioCurrency = getPortfolioCurrency(portfolio);
       return (portfolio.transactions ?? []).map((transaction) => {
         const assetMeta = transaction.assetId ? assetsById.get(transaction.assetId) : undefined;
+        const resolvedAssetType = transaction.assetType ?? assetMeta?.type;
+        const transactionCurrency = getExportTransactionCurrency(
+          { assetType: resolvedAssetType, type: transaction.type },
+          portfolioCurrency
+        );
+        const assetCurrency = resolvedAssetType ? getAssetCurrency(resolvedAssetType) : "";
+        const assetPriceCurrency = assetMeta ? getAssetCurrency(assetMeta) : assetCurrency;
 
         return {
           portfolioId: portfolio.id,
           portfolioName: portfolio.name,
           portfolioDescription: portfolio.description,
           portfolioCreatedAt: portfolio.createdAt,
+          portfolioCurrency,
           transactionId: transaction.id,
           transactionType: transaction.type,
           transactionDate: transaction.date,
           transactionPrice: Number(transaction.price ?? 0),
+          transactionCurrency,
           transactionQuantity: transaction.quantity ?? "",
           transactionNotes: transaction.notes ?? "",
           assetId: transaction.assetId ?? "",
           assetSymbol: transaction.assetSymbol ?? assetMeta?.symbol ?? "",
           assetName: transaction.assetName ?? assetMeta?.name ?? "",
-          assetType: transaction.assetType ?? assetMeta?.type ?? "",
-          assetPrice: Number(assetMeta?.price ?? 0),
+          assetType: resolvedAssetType ?? "",
+          assetCurrency,
+          assetPrice: assetMeta ? getAssetCurrentPrice(assetMeta) : 0,
+          assetPriceCurrency,
+          assetPriceArs: assetMeta?.price_ars ?? "",
         };
       });
     });
@@ -95,17 +124,22 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
         "portfolio_name",
         "portfolio_description",
         "portfolio_created_at",
+        "portfolio_currency",
         "transaction_id",
         "transaction_type",
         "transaction_date",
         "transaction_price",
+        "transaction_currency",
         "transaction_quantity",
         "transaction_notes",
         "asset_id",
         "asset_symbol",
         "asset_name",
         "asset_type",
+        "asset_currency",
         "asset_price",
+        "asset_price_currency",
+        "asset_price_ars",
       ];
 
       const headerMap: Record<string, keyof ExportRow> = {
@@ -113,17 +147,22 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
         portfolio_name: "portfolioName",
         portfolio_description: "portfolioDescription",
         portfolio_created_at: "portfolioCreatedAt",
+        portfolio_currency: "portfolioCurrency",
         transaction_id: "transactionId",
         transaction_type: "transactionType",
         transaction_date: "transactionDate",
         transaction_price: "transactionPrice",
+        transaction_currency: "transactionCurrency",
         transaction_quantity: "transactionQuantity",
         transaction_notes: "transactionNotes",
         asset_id: "assetId",
         asset_symbol: "assetSymbol",
         asset_name: "assetName",
         asset_type: "assetType",
+        asset_currency: "assetCurrency",
         asset_price: "assetPrice",
+        asset_price_currency: "assetPriceCurrency",
+        asset_price_ars: "assetPriceArs",
       };
 
       let blob: Blob;
@@ -223,13 +262,16 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
                       key={portfolio.id}
                       type="button"
                       onClick={() => togglePortfolioSelection(portfolio.id)}
-                    className={`button inline-flex rounded-xl border px-2.5 py-1.5 text-xs font-medium sm:px-3 sm:text-sm ${
+                    className={`button inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-medium sm:px-3 sm:text-sm ${
                         isSelected
                           ? "button-primary border-sky-500"
                           : "button-secondary bg-[#0f172a]"
                       }`}
                     >
                       {portfolio.name}
+                      <span className="inline-flex rounded-full border border-slate-700 px-1.5 py-px text-[10px] font-semibold opacity-80">
+                        {getPortfolioCurrency(portfolio)}
+                      </span>
                     </button>
                   );
                 })}

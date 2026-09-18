@@ -17,6 +17,19 @@ function normalizePartnerId(value: unknown) {
   return parsed;
 }
 
+function normalizePrice(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return 0;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
 export async function GET(request: Request) {
   const session = getSessionFromRequest(request);
   if (!session) {
@@ -50,11 +63,12 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { symbol, name, type, price, id_partner } = body as {
+  const { symbol, name, type, price, price_ars, id_partner } = body as {
     symbol: string;
     name: string;
     type: Asset["type"];
     price?: number;
+    price_ars?: number;
     id_partner?: number;
   };
 
@@ -67,13 +81,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El ID partner debe ser un entero positivo." }, { status: 400 });
   }
 
+  const normalizedPrice = normalizePrice(price);
+  const normalizedPriceArs = normalizePrice(price_ars);
+  if (normalizedPrice === null || normalizedPriceArs === null) {
+    return NextResponse.json({ error: "El precio debe ser un número mayor o igual a 0." }, { status: 400 });
+  }
+
   const newAsset: Asset = {
     id: createAssetId(),
     symbol: symbol.trim().toUpperCase(),
     name: name.trim(),
     type,
     id_partner: normalizedPartnerId,
-    price: Number(price ?? 0),
+    price: type === "cedear" ? 0 : normalizedPrice,
+    price_ars: type === "cedear" ? normalizedPriceArs : undefined,
   };
 
   await insertAsset(newAsset);
@@ -87,12 +108,13 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json();
-  const { id, symbol, name, type, price, id_partner } = body as {
+  const { id, symbol, name, type, price, price_ars, id_partner } = body as {
     id: string;
     symbol: string;
     name: string;
     type: Asset["type"];
     price?: number;
+    price_ars?: number;
     id_partner?: number;
   };
 
@@ -105,12 +127,19 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "El ID partner debe ser un entero positivo." }, { status: 400 });
   }
 
+  const normalizedPrice = normalizePrice(price);
+  const normalizedPriceArs = normalizePrice(price_ars);
+  if (normalizedPrice === null || normalizedPriceArs === null) {
+    return NextResponse.json({ error: "El precio debe ser un número mayor o igual a 0." }, { status: 400 });
+  }
+
   const updated = await updateAssetById(id, {
     symbol: symbol.trim().toUpperCase(),
     name: name.trim(),
     type,
     id_partner: normalizedPartnerId,
-    price: Number(price ?? 0),
+    price: type === "cedear" ? 0 : normalizedPrice,
+    price_ars: type === "cedear" ? normalizedPriceArs : undefined,
   });
 
   if (!updated) {

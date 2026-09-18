@@ -60,6 +60,7 @@ Important fields:
 - `id`: string id generated from MongoDB `ObjectId`.
 - `ownerUserId`: optional owner id.
 - `name`, `description`.
+- `currency`: `USD` or `ARS`. Set at creation via `POST /api/portfolios`, immutable afterwards. Legacy documents without `currency` normalize to `USD` on read.
 - `managesCash`: enables cash calculation.
 - `createdAt`.
 - `assets`: embedded asset snapshots.
@@ -80,6 +81,7 @@ Business rules:
 - Name is required for create/update.
 - Normal API reads/writes are owner-scoped.
 - Deleting a portfolio deletes the whole MongoDB document.
+- Currency invariant: `buy`/`sell` transactions are only accepted when the asset currency (`getAssetCurrency()`: `ARS` for `cedear`, `USD` otherwise) matches the portfolio currency. Enforced in `POST`/`PUT /api/portfolios/[id]` and in the integration ingestion endpoint (`400` on mismatch). Cash transactions carry no asset and are always accepted.
 
 ### Asset
 
@@ -95,7 +97,9 @@ Representation:
 
 Important fields:
 
-- `id`, `symbol`, `name`, `type`, `id_partner`, `price`.
+- `id`, `symbol`, `name`, `type`, `id_partner`, `price`, `price_ars`.
+- `type` is one of `stock`, `etf`, `crypto`, `bond`, `cash`, `other`, `cedear`.
+- `price` is the current/local price in USD for non-CEDEAR assets. `price_ars` is the current/local price in ARS and is only meaningful for `cedear` assets (kept at `0`/unset otherwise).
 - `priceSource`, `quoteCheckedAt`, `quoteUpdatedAt`.
 - No `transactions` field: the only transaction ledger is `Portfolio.transactions`. Legacy documents may still contain a per-asset `transactions` array; `normalizeAsset()` and `normalizePortfolio()` strip it on read.
 
@@ -110,6 +114,8 @@ Business rules:
 - Global asset symbol and name are required.
 - Symbol is uppercased.
 - `id_partner` must be a positive integer if provided.
+- `price`/`price_ars` must be numbers `>= 0` on API create/update. For `cedear` assets the API stores `price_ars` and forces `price` to `0`; for other types `price_ars` is cleared.
+- Currency helpers live in `src/lib/portfolio.ts`: `isCedearAsset()`, `getAssetCurrency()` (`ARS` for `cedear`, `USD` otherwise), `getAssetCurrentPrice()` (`price_ars` for `cedear`, `price` otherwise).
 - No uniqueness constraint on `symbol`; only an index exists.
 
 ### Transaction
@@ -163,12 +169,13 @@ Representation:
 Business rules in calculations:
 
 - Cash is calculated only when `portfolio.managesCash` is true.
+- Cash amounts are expressed in the portfolio currency; the synthetic cash holding/position uses `currency`/`symbol` of the portfolio (`USD`/`ARS`).
 - `cash_in` increases cash balance and net contributions.
 - `cash_out` decreases cash balance and net contributions.
 - `buy` decreases cash balance.
 - `sell` increases cash balance.
 - Cash appears as synthetic holding in `calculatePortfolioPerformance()`.
-- Cash is listed as the first open position (`Efectivo` / `USD`) in portfolio positions when `managesCash` is true; the card is not clickable (cash has no asset detail page) and its dot is always green (`#10b981`).
+- Cash is listed as the first open position (`Efectivo` / portfolio currency) in portfolio positions when `managesCash` is true; the card is not clickable (cash has no asset detail page) and its dot is always green (`#10b981`).
 
 UNKNOWN / REQUIRES CONFIRMATION:
 
@@ -193,6 +200,8 @@ Business rules:
 - Sell decreases quantity and total cost using current average buy price.
 - Open positions require positive remaining quantity.
 - Closed positions require near-zero quantity plus bought and sold quantity.
+- Valuation uses the effective asset price (`getAssetCurrentPrice()`): `price_ars` for `cedear`, `price` otherwise. Transaction prices are expected in the asset currency (ARS for CEDEARs).
+- Summaries carry `currency` (`USD`/`ARS`) per holding/position plus a `marketValueByCurrency` breakdown. Aggregate totals (`totalMarketValue`, `totalOpenMarketValue`) remain nominal sums across currencies (no FX conversion).
 
 ### Price
 
@@ -202,18 +211,20 @@ Purpose:
 
 Representation:
 
-- Stored on global `Asset.price`.
+- Stored on global `Asset.price` (USD assets) or `Asset.price_ars` (ARS, `cedear` assets only).
 - Quote metadata: `quoteCheckedAt`, `quoteUpdatedAt`.
 
 Providers:
 
 - Finnhub for stocks/ETFs.
 - CoinMarketCap for eligible crypto assets.
+- BYMA (`POST /vanoms-be-core/rest/api/bymadata/free/cedears` on `BYMA_CEDEARS_URL`, body `{ excludeZeroPxAndQty: true, T1: true, T0: false }`) for `cedear` assets. The response is the full CEDEAR list; `src/lib/byma-service.ts` filters by the requested symbols and only keeps entries with valid `symbol` + `bidPrice > 0`.
 
 Business rules:
 
 - Provider refresh persists changed price/timestamps only via `/api/assets?forceRefresh=1`.
 - If provider unavailable/fails/no fresh quote, existing local price remains in use.
+- CEDEAR guard: outside market hours BYMA may return `bidPrice` `0`/missing. Those entries are discarded and the stored `price_ars`/`quoteUpdatedAt` are never overwritten with invalid values.
 
 ### Performance And Metrics
 

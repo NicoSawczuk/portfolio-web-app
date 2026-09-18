@@ -1,9 +1,15 @@
 import type { Asset } from "@/lib/portfolio";
+import { getAssetCurrentPrice, isCedearAsset } from "@/lib/portfolio";
 import {
   getCoinMarketCapPricesForAssets,
   isCoinMarketCapConfigured,
   isCoinMarketCapEligibleAsset,
 } from "@/lib/coinmarketcap-service";
+import {
+  getBymaCedearPricesForAssets,
+  isBymaConfigured,
+  isBymaEligibleAsset,
+} from "@/lib/byma-service";
 
 const FINNHUB_API_BASE_URL = process.env.FINNHUB_API_BASE_URL ?? "https://finnhub.io/api/v1";
 const FINNHUB_API_TOKEN = process.env.FINNHUB_API_TOKEN;
@@ -38,7 +44,7 @@ function isFinnhubEligibleAsset(asset: Asset) {
 }
 
 function hasFreshQuote(asset: Asset, nowMs: number, refreshMs: number) {
-  if (!asset.quoteUpdatedAt || asset.price <= 0) {
+  if (!asset.quoteUpdatedAt || getAssetCurrentPrice(asset) <= 0) {
     return false;
   }
 
@@ -121,6 +127,7 @@ export async function refreshAssetsQuotesWithCache(
   const forceRefresh = options?.forceRefresh ?? false;
   const quoteBySymbol = new Map<string, { price: number; updatedAt: string }>();
   const cryptoQuoteByAssetId = new Map<string, { price: number; updatedAt: string }>();
+  const bymaQuoteByAssetId = new Map<string, { price: number; updatedAt: string }>();
   const loadFinnhubQuotes = async () => {
     if (!hasFinnhubCredentials()) {
       return;
@@ -163,13 +170,65 @@ export async function refreshAssetsQuotesWithCache(
     }
   };
 
-  await Promise.allSettled([loadFinnhubQuotes(), loadCoinMarketCapQuotes()]);
+  const loadBymaQuotes = async () => {
+    if (!isBymaConfigured()) {
+      return;
+    }
+
+    const assetsToRefresh = assets.filter(
+      (asset) => isBymaEligibleAsset(asset) && (forceRefresh || !hasFreshQuote(asset, nowMs, refreshMs))
+    );
+
+    if (assetsToRefresh.length === 0) {
+      return;
+    }
+
+    const quotesByAssetId = await getBymaCedearPricesForAssets(assetsToRefresh);
+    for (const [assetId, quote] of quotesByAssetId) {
+      // BYMA solo devuelve cotizaciones válidas (bidPrice > 0); si el símbolo no
+      // está en el mapa es porque fuera de mercado no hay precio correcto y no
+      // se debe pisar el último precio_ars conocido.
+      bymaQuoteByAssetId.set(assetId, quote);
+    }
+  };
+
+  await Promise.allSettled([loadFinnhubQuotes(), loadCoinMarketCapQuotes(), loadBymaQuotes()]);
 
   const hydratedAssets = assets.map((asset) => {
     const isCryptoByCmc = isCoinMarketCapEligibleAsset(asset);
-    const isLiveEligible = isFinnhubEligibleAsset(asset) || isCryptoByCmc;
+    const isCedearByByma = isCedearAsset(asset) && !isCryptoByCmc;
+    const isLiveEligible = isFinnhubEligibleAsset(asset) || isCryptoByCmc || isCedearByByma;
 
     if (!isLiveEligible) {
+      return {
+        ...asset,
+        priceSource: "local" as const,
+        quoteCheckedAt: checkedAtIso,
+      };
+    }
+
+    if (isCedearByByma) {
+      const refreshedQuote = bymaQuoteByAssetId.get(asset.id);
+
+      if (refreshedQuote) {
+        return {
+          ...asset,
+          price_ars: refreshedQuote.price,
+          priceSource: "live" as const,
+          quoteCheckedAt: checkedAtIso,
+          quoteUpdatedAt: refreshedQuote.updatedAt,
+        };
+      }
+
+      if (hasFreshQuote(asset, nowMs, refreshMs)) {
+        return {
+          ...asset,
+          priceSource: "live" as const,
+          quoteCheckedAt: checkedAtIso,
+        };
+      }
+
+      // Sin cotización válida de BYMA se conserva price_ars y quoteUpdatedAt.
       return {
         ...asset,
         priceSource: "local" as const,
@@ -212,6 +271,7 @@ export async function refreshAssetsQuotesWithCache(
     return {
       ...asset,
       price: hydratedAsset.price,
+      price_ars: hydratedAsset.price_ars,
       quoteCheckedAt: hydratedAsset.quoteCheckedAt,
       quoteUpdatedAt: hydratedAsset.quoteUpdatedAt,
     };
@@ -220,6 +280,7 @@ export async function refreshAssetsQuotesWithCache(
   const hasPersistenceChanges = persistedAssets.some(
     (asset, index) =>
       asset.price !== assets[index]?.price ||
+      asset.price_ars !== assets[index]?.price_ars ||
       asset.quoteCheckedAt !== assets[index]?.quoteCheckedAt ||
       asset.quoteUpdatedAt !== assets[index]?.quoteUpdatedAt
   );

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { Asset, Portfolio } from "@/lib/portfolio";
+import type { Asset, AssetCurrency, Portfolio } from "@/lib/portfolio";
+import { getPortfolioCurrency } from "@/lib/portfolio";
 import { getPortfolioSummary } from "@/lib/portfolio-summary";
 import PortfolioValuationCard from "@/components/PortfolioValuationCard";
 
@@ -18,10 +19,16 @@ function emptyPortfolio(): Omit<Portfolio, "id" | "createdAt" | "assets"> {
   return {
     name: "",
     description: "",
+    currency: "USD",
     managesCash: false,
     transactions: [],
   };
 }
+
+const portfolioCurrencies: Array<{ value: AssetCurrency; label: string }> = [
+  { value: "USD", label: "USD" },
+  { value: "ARS", label: "ARS" },
+];
 
 interface PortfolioDashboardClientProps {
   initialPortfolios: Portfolio[];
@@ -72,6 +79,7 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
   const [portfolios, setPortfolios] = useState(initialPortfolios);
   const [assets] = useState(initialAssets);
   const [showAmounts, setShowAmounts] = useState(true);
+  const [selectedCurrencies, setSelectedCurrencies] = useState<AssetCurrency[]>(["USD", "ARS"]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -79,8 +87,22 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
   const [formState, setFormState] = useState(emptyPortfolio());
 
   const portfolioSummaries = useMemo(
-    () => portfolios.map((portfolio) => ({ portfolio, summary: getPortfolioSummary(portfolio, assets) })),
+    () => portfolios.map((portfolio) => ({ portfolio, summary: getPortfolioSummary(portfolio, assets, { includeChartPoints: false }) })),
     [assets, portfolios]
+  );
+
+  const toggleCurrencyFilter = (currency: AssetCurrency) => {
+    setSelectedCurrencies((current) =>
+      current.includes(currency) ? current.filter((item) => item !== currency) : [...current, currency]
+    );
+  };
+
+  const visiblePortfolioSummaries = useMemo(
+    () =>
+      portfolioSummaries.filter(({ portfolio }) =>
+        selectedCurrencies.includes(getPortfolioCurrency(portfolio))
+      ),
+    [portfolioSummaries, selectedCurrencies]
   );
 
   const openCreateModal = () => {
@@ -95,6 +117,7 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
     setFormState({
       name: portfolio.name,
       description: portfolio.description,
+      currency: getPortfolioCurrency(portfolio),
       managesCash: Boolean(portfolio.managesCash),
       transactions: portfolio.transactions ?? [],
     });
@@ -206,22 +229,44 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
           </div>
         ) : (
           <div className="card card--panel">
-            <div className="card-header">
+            <div className="card-header flex-wrap">
               <h2 className="card-title">Portfolios</h2>
-              <button
-                type="button"
-                onClick={() => setShowAmounts((value) => !value)}
-                className="button button-secondary inline-flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium"
-                aria-label={showAmounts ? "Ocultar montos" : "Mostrar montos"}
-                title={showAmounts ? "Ocultar montos" : "Mostrar montos"}
-              >
-                <EyeIcon hidden={!showAmounts} />
-                <span>{showAmounts ? "Ocultar" : "Mostrar"}</span>
-              </button>
+              <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+                <div className="flex items-center gap-1.5" role="group" aria-label="Filtrar por moneda">
+                  {portfolioCurrencies.map((item) => {
+                    const isSelected = selectedCurrencies.includes(item.value);
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => toggleCurrencyFilter(item.value)}
+                        aria-pressed={isSelected}
+                        className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${
+                          isSelected
+                            ? "border-sky-400/40 bg-sky-400/15 text-sky-200"
+                            : "border-slate-700 text-slate-500 opacity-60 hover:opacity-100"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAmounts((value) => !value)}
+                  className="button button-secondary inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium"
+                  aria-label={showAmounts ? "Ocultar montos" : "Mostrar montos"}
+                  title={showAmounts ? "Ocultar montos" : "Mostrar montos"}
+                >
+                  <EyeIcon hidden={!showAmounts} />
+                  <span>{showAmounts ? "Ocultar" : "Mostrar"}</span>
+                </button>
+              </div>
             </div>
 
             <div className="card-content card-content--list">
-              {portfolioSummaries.map(({ portfolio, summary }) => (
+              {visiblePortfolioSummaries.map(({ portfolio, summary }) => (
                 <article
                   key={portfolio.id}
                   className="card-item relative"
@@ -235,7 +280,12 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                   <div className="pointer-events-none relative z-10 flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-4">
                     <div className="min-w-0 p-1 pr-2">
                       <div className="space-y-1.5">
-                        <h3 className="card-title">{portfolio.name}</h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="card-title">{portfolio.name}</h3>
+                          <span className="inline-flex rounded-full border border-slate-700 px-2 py-0.5 text-[11px] font-semibold text-slate-300">
+                            {getPortfolioCurrency(portfolio)}
+                          </span>
+                        </div>
                         <p className="card-description line-clamp-2">{portfolio.description}</p>
                       </div>
                     </div>
@@ -247,6 +297,8 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                         totalPnlPct={summary?.totalPnlPct ?? 0}
                         showAmounts={showAmounts}
                         className="w-full"
+                        currency={summary?.currency ?? getPortfolioCurrency(portfolio)}
+                        marketValueByCurrency={summary?.marketValueByCurrency}
                       />
                     </div>
                   </div>
@@ -322,6 +374,38 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                   placeholder="Opcional"
                 />
               </label>
+
+              {editingPortfolio ? (
+                <div className="modal-field">
+                  <span className="text-sm text-slate-400">Moneda (no se puede cambiar)</span>
+                  <div className="mt-1">
+                    <span className="inline-flex rounded-full border border-slate-700 px-2.5 py-1 text-xs font-semibold text-slate-200">
+                      {getPortfolioCurrency(editingPortfolio)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="modal-field">
+                  <span className="text-sm text-slate-400">Moneda del portfolio</span>
+                  <div className="mt-1 flex items-center gap-2" role="group" aria-label="Moneda del portfolio">
+                    {portfolioCurrencies.map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => handleChange("currency", item.value)}
+                        aria-pressed={formState.currency === item.value}
+                        className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                          formState.currency === item.value
+                            ? "border-sky-400/40 bg-sky-400/15 text-sky-200"
+                            : "border-slate-700 text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <label className="modal-toggle-row">
                 <span>Gestionar efectivo en este portfolio</span>

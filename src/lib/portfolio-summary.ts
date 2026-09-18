@@ -1,10 +1,12 @@
-import type { Asset, Portfolio, Transaction } from "@/lib/portfolio";
+import type { Asset, AssetCurrency, Portfolio, Transaction } from "@/lib/portfolio";
+import { getAssetCurrency, getAssetCurrentPrice, getPortfolioCurrency } from "@/lib/portfolio";
 
 export interface PortfolioHoldingSummary {
   assetId: string;
   symbol: string;
   name: string;
   type: Asset["type"];
+  currency: AssetCurrency;
   quantity: number;
   totalCost: number;
   avgBuyPrice: number;
@@ -17,7 +19,9 @@ export interface PortfolioHoldingSummary {
 
 export interface PortfolioPerformance {
   holdings: PortfolioHoldingSummary[];
+  currency: AssetCurrency;
   totalMarketValue: number;
+  marketValueByCurrency: Record<AssetCurrency, number>;
   totalCostBasis: number;
   totalPnl: number;
   totalPnlPct: number;
@@ -27,7 +31,9 @@ export interface PortfolioPerformance {
 
 export interface PortfolioSummarySnapshot {
   portfolioId: string;
+  currency: AssetCurrency;
   totalMarketValue: number;
+  marketValueByCurrency: Record<AssetCurrency, number>;
   totalPnl: number;
   totalPnlPct: number;
 }
@@ -45,6 +51,7 @@ function applyTransactionToHoldings(
     symbol: transaction.assetSymbol ?? "",
     name: transaction.assetName ?? "",
     type: transaction.assetType ?? "other",
+    currency: getAssetCurrency(transaction.assetType ?? "other"),
     quantity: 0,
     totalCost: 0,
     avgBuyPrice: 0,
@@ -76,7 +83,10 @@ function applyTransactionToHoldings(
 
   if (transaction.assetSymbol) existing.symbol = transaction.assetSymbol;
   if (transaction.assetName) existing.name = transaction.assetName;
-  if (transaction.assetType) existing.type = transaction.assetType;
+  if (transaction.assetType) {
+    existing.type = transaction.assetType;
+    existing.currency = getAssetCurrency(transaction.assetType);
+  }
 
   holdings.set(transaction.assetId, existing);
 }
@@ -135,9 +145,14 @@ export function calculateCashTotals(portfolio: Portfolio | null | undefined): Ca
   return { balance, netContributions };
 }
 
+export interface PortfolioPerformanceOptions {
+  includeChartPoints?: boolean;
+}
+
 export function calculatePortfolioPerformance(
   portfolio: Portfolio | null | undefined,
-  assets: Asset[]
+  assets: Asset[],
+  options: PortfolioPerformanceOptions = {}
 ): PortfolioPerformance | null {
   if (!portfolio) {
     return null;
@@ -157,7 +172,8 @@ export function calculatePortfolioPerformance(
     .filter((item) => item.quantity > 0)
     .map((item) => {
       const assetMeta = assetById.get(item.assetId);
-      const currentPrice = assetMeta?.price ?? 0;
+      const currentPrice = assetMeta ? getAssetCurrentPrice(assetMeta) : 0;
+      const currency = getAssetCurrency(assetMeta?.type ?? item.type);
       const marketValue = item.quantity * currentPrice;
       const costBasis = item.quantity * item.avgBuyPrice;
       const pnl = marketValue - costBasis;
@@ -165,6 +181,7 @@ export function calculatePortfolioPerformance(
 
       return {
         ...item,
+        currency,
         currentPrice,
         marketValue,
         costBasis,
@@ -176,11 +193,13 @@ export function calculatePortfolioPerformance(
 
   if (managesCash) {
     const normalizedCashBalance = Math.abs(cashBalance) < 1e-8 ? 0 : cashBalance;
+    const cashCurrency = getPortfolioCurrency(portfolio);
     holdingsList.unshift({
       assetId: `cash:${portfolio.id}`,
-      symbol: "USD",
+      symbol: cashCurrency,
       name: "Efectivo",
       type: "cash",
+      currency: cashCurrency,
       quantity: normalizedCashBalance,
       totalCost: normalizedCashBalance,
       avgBuyPrice: 1,
@@ -193,6 +212,10 @@ export function calculatePortfolioPerformance(
   }
 
   const totalMarketValue = holdingsList.reduce((sum, item) => sum + item.marketValue, 0);
+  const marketValueByCurrency: Record<AssetCurrency, number> = { USD: 0, ARS: 0 };
+  for (const item of holdingsList) {
+    marketValueByCurrency[item.currency] += item.marketValue;
+  }
   const totalCostBasis = managesCash
     ? cashNetContributions
     : holdingsList.reduce((sum, item) => sum + item.costBasis, 0);
@@ -206,76 +229,87 @@ export function calculatePortfolioPerformance(
     return acc;
   }, {});
 
-  const chartPoints = [{ label: "Inicio", value: 0 }];
-  const transactionsByDate = sortedTransactions.reduce<Record<string, Transaction[]>>((acc, transaction) => {
-    if (!transaction.date) {
+  const { includeChartPoints = true } = options;
+  let chartPoints: Array<{ label: string; value: number }>;
+  if (!includeChartPoints) {
+    chartPoints = [
+      { label: "Inicio", value: 0 },
+      { label: "Hoy", value: totalMarketValue },
+    ];
+  } else {
+    chartPoints = [{ label: "Inicio", value: 0 }];
+    const transactionsByDate = sortedTransactions.reduce<Record<string, Transaction[]>>((acc, transaction) => {
+      if (!transaction.date) {
+        return acc;
+      }
+
+      const bucket = acc[transaction.date] ?? [];
+      bucket.push(transaction);
+      acc[transaction.date] = bucket;
       return acc;
-    }
+    }, {});
 
-    const bucket = acc[transaction.date] ?? [];
-    bucket.push(transaction);
-    acc[transaction.date] = bucket;
-    return acc;
-  }, {});
+    const dates = Object.keys(transactionsByDate).sort();
+    const chartHoldings = new Map<string, { assetId: string; quantity: number; totalCost: number; avgBuyPrice: number }>();
+    let chartCashBalance = 0;
 
-  const dates = Object.keys(transactionsByDate).sort();
-  const chartHoldings = new Map<string, { assetId: string; quantity: number; totalCost: number; avgBuyPrice: number }>();
-  let chartCashBalance = 0;
+    const applyChartTransaction = (transaction: Transaction) => {
+      if (!transaction.assetId) {
+        return;
+      }
 
-  const applyChartTransaction = (transaction: Transaction) => {
-    if (!transaction.assetId) {
-      return;
-    }
+      const existing = chartHoldings.get(transaction.assetId) ?? {
+        assetId: transaction.assetId,
+        quantity: 0,
+        totalCost: 0,
+        avgBuyPrice: 0,
+      };
 
-    const existing = chartHoldings.get(transaction.assetId) ?? {
-      assetId: transaction.assetId,
-      quantity: 0,
-      totalCost: 0,
-      avgBuyPrice: 0,
+      if (transaction.type === "buy") {
+        const quantity = Number(transaction.quantity ?? 0);
+        if (quantity > 0) {
+          existing.quantity += quantity;
+          existing.totalCost += quantity * Number(transaction.price ?? 0);
+          existing.avgBuyPrice = existing.quantity ? existing.totalCost / existing.quantity : 0;
+        }
+      }
+
+      if (transaction.type === "sell") {
+        const quantity = Number(transaction.quantity ?? 0);
+        if (quantity > 0) {
+          const costToRemove = Math.min(existing.quantity, quantity) * existing.avgBuyPrice;
+          existing.quantity = Math.max(0, existing.quantity - quantity);
+          existing.totalCost = Math.max(0, existing.totalCost - costToRemove);
+          existing.avgBuyPrice = existing.quantity ? existing.totalCost / existing.quantity : 0;
+        }
+      }
+
+      chartHoldings.set(transaction.assetId, existing);
     };
 
-    if (transaction.type === "buy") {
-      const quantity = Number(transaction.quantity ?? 0);
-      if (quantity > 0) {
-        existing.quantity += quantity;
-        existing.totalCost += quantity * Number(transaction.price ?? 0);
-        existing.avgBuyPrice = existing.quantity ? existing.totalCost / existing.quantity : 0;
-      }
-    }
-
-    if (transaction.type === "sell") {
-      const quantity = Number(transaction.quantity ?? 0);
-      if (quantity > 0) {
-        const costToRemove = Math.min(existing.quantity, quantity) * existing.avgBuyPrice;
-        existing.quantity = Math.max(0, existing.quantity - quantity);
-        existing.totalCost = Math.max(0, existing.totalCost - costToRemove);
-        existing.avgBuyPrice = existing.quantity ? existing.totalCost / existing.quantity : 0;
-      }
-    }
-
-    chartHoldings.set(transaction.assetId, existing);
-  };
-
-  dates.forEach((date) => {
-    transactionsByDate[date]?.forEach((transaction) => {
-      applyChartTransaction(transaction);
-      if (managesCash) {
-        const movement = getCashMovement(transaction);
-        chartCashBalance += movement.balanceDelta;
-      }
+    dates.forEach((date) => {
+      transactionsByDate[date]?.forEach((transaction) => {
+        applyChartTransaction(transaction);
+        if (managesCash) {
+          const movement = getCashMovement(transaction);
+          chartCashBalance += movement.balanceDelta;
+        }
+      });
+      const value = Array.from(chartHoldings.values()).reduce((sum, item) => {
+        const assetMeta = assetById.get(item.assetId);
+        return sum + item.quantity * (assetMeta ? getAssetCurrentPrice(assetMeta) : 0);
+      }, managesCash ? chartCashBalance : 0);
+      chartPoints.push({ label: date, value });
     });
-    const value = Array.from(chartHoldings.values()).reduce((sum, item) => {
-      const assetMeta = assetById.get(item.assetId);
-      return sum + item.quantity * (assetMeta?.price ?? 0);
-    }, managesCash ? chartCashBalance : 0);
-    chartPoints.push({ label: date, value });
-  });
 
-  chartPoints.push({ label: "Hoy", value: totalMarketValue });
+    chartPoints.push({ label: "Hoy", value: totalMarketValue });
+  }
 
   return {
     holdings: holdingsList,
+    currency: getPortfolioCurrency(portfolio),
     totalMarketValue,
+    marketValueByCurrency,
     totalCostBasis,
     totalPnl,
     totalPnlPct,
@@ -286,9 +320,10 @@ export function calculatePortfolioPerformance(
 
 export function getPortfolioSummary(
   portfolio: Portfolio | null | undefined,
-  assets: Asset[]
+  assets: Asset[],
+  options: PortfolioPerformanceOptions = {}
 ): PortfolioSummarySnapshot | null {
-  const performance = calculatePortfolioPerformance(portfolio, assets);
+  const performance = calculatePortfolioPerformance(portfolio, assets, options);
 
   if (!performance) {
     return null;
@@ -296,7 +331,9 @@ export function getPortfolioSummary(
 
   return {
     portfolioId: portfolio?.id ?? "",
+    currency: getPortfolioCurrency(portfolio),
     totalMarketValue: performance.totalMarketValue,
+    marketValueByCurrency: performance.marketValueByCurrency,
     totalPnl: performance.totalPnl,
     totalPnlPct: performance.totalPnlPct,
   };

@@ -23,7 +23,7 @@ Files:
 
 Persisted fields:
 
-- `id`, `ownerUserId`, `name`, `description`, `managesCash`, `createdAt`, `assets: []`, `transactions: []`.
+- `id`, `ownerUserId`, `name`, `description`, `currency`, `managesCash`, `createdAt`, `assets: []`, `transactions: []`.
 
 ## Portfolio Update/Delete
 
@@ -90,8 +90,9 @@ AssetsPageClient refresh button
   -> GET /api/assets?forceRefresh=1
   -> readAssets()
   -> refreshAssetsQuotesWithCache(assets, { forceRefresh: true })
-  -> Finnhub and CoinMarketCap requests run with Promise.allSettled
-  -> writeAssets(persistedAssets) if price/timestamps changed
+  -> Finnhub, CoinMarketCap and BYMA requests run with Promise.allSettled
+  -> Finnhub covers stock/etf (price, USD); CoinMarketCap covers crypto (price, USD); BYMA covers cedear (price_ars, ARS)
+  -> writeAssets(persistedAssets) if price/price_ars/timestamps changed
   -> return hydratedAssets
   -> client replaces assets state
 ```
@@ -101,11 +102,13 @@ Files:
 - `src/app/api/assets/route.ts`
 - `src/lib/finnhub-service.ts`
 - `src/lib/coinmarketcap-service.ts`
+- `src/lib/byma-service.ts`
 - `src/lib/asset-db.ts`
 
 Fallback behavior:
 
 - Failed/unconfigured provider results in local persisted price.
+- BYMA symbols with invalid/missing `bidPrice` (e.g. outside market hours) are skipped: `price_ars` and `quoteUpdatedAt` keep their last valid values.
 
 ## Transaction Creation From UI
 
@@ -119,11 +122,13 @@ Flow:
 ```text
 Client modal
   -> parse positive decimal input
+  -> asset picker lists only assets whose currency matches the portfolio currency
   -> POST /api/portfolios/[id] with { kind: "transaction", ... }
   -> API verifies session
   -> validates type and required fields by truthiness
   -> readPortfolioById(id, session.userId)
   -> for buy/sell: readAssetById(assetId)
+  -> for buy/sell: reject with 400 if asset currency != portfolio currency
   -> create Transaction id
   -> prepend transaction to portfolio.transactions
   -> if buy/sell and asset not in portfolio.assets, copy global asset into portfolio.assets
@@ -237,6 +242,19 @@ Important difference from UI API:
 - Stricter date/positive number validation.
 - Uses API key instead of user session.
 - Is not scoped by owner user id.
+- Rejects with 400 if the asset currency != portfolio currency (same invariant as the UI API).
+
+## Transactions Export
+
+```text
+/export page
+  -> readPortfolios(session.userId) + readAssets({ minimal: true })
+  -> TransactionsExportPanel (client-side CSV/JSON download)
+  -> rows carry portfolio_currency, transaction_currency
+     (buy/sell: asset currency, otherwise portfolio currency),
+     asset_currency, asset_price_currency and asset_price_ars
+  -> asset_price uses the effective price (price_ars for cedear)
+```
 
 ## Portfolio Valuation
 
@@ -265,8 +283,9 @@ Home:
   -> verifySessionToken()
   -> readPortfolios(session.userId)
   -> readAssets({ minimal: true })
-  -> calculatePortfolioPerformance() per portfolio
-  -> render global totals/rankings
+  -> calculatePortfolioPerformance() per portfolio (chart points skipped)
+  -> group into totalsByCurrency + totalMarketByCurrency (USD -> ARS, never mixed)
+  -> HomeHeroCard (client, USD/ARS switch) + Inversion/Ganancias/Activos sections
 ```
 
 Portfolio list:

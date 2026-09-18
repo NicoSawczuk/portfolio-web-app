@@ -1,6 +1,7 @@
 import { Collection, ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { Asset, Portfolio } from "@/lib/portfolio";
+import { normalizePortfolioCurrency } from "@/lib/portfolio";
 
 const collectionName = "portfolios";
 
@@ -25,6 +26,8 @@ function normalizePortfolio(portfolio: Portfolio): Portfolio {
   return {
     ...portfolio,
     id: portfolio.id || new ObjectId().toHexString(),
+    // Portfolios legacy sin currency se consideran USD.
+    currency: normalizePortfolioCurrency(portfolio.currency),
     managesCash: Boolean(portfolio.managesCash),
     assets: (portfolio.assets ?? []).map((asset) => stripLegacyAssetTransactions(asset)),
     transactions: portfolio.transactions ?? [],
