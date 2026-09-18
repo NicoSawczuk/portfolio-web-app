@@ -3,6 +3,10 @@ import { ObjectId } from "mongodb";
 import { readAssetBySymbol } from "@/lib/asset-db";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
 import { getAssetCurrency, getPortfolioCurrency } from "@/lib/portfolio";
+import { isUserActive } from "@/lib/auth";
+import { N8N_PERMISSIONS } from "@/lib/permissions";
+import { findUserByTelegramId } from "@/lib/user-db";
+import { hasUserPermission } from "@/lib/user-permissions-db";
 import type { Transaction, TransactionType } from "@/lib/portfolio";
 
 const PORTFOLIO_TRANSACTIONS_API_KEY = process.env.PORTFOLIO_TRANSACTIONS_API_KEY?.trim();
@@ -15,6 +19,7 @@ type CreateTransactionPayload = {
   price?: unknown;
   date?: unknown;
   notes?: unknown;
+  telegramUserId?: unknown;
 };
 
 function createObjectId() {
@@ -38,6 +43,24 @@ function isValidDateInputValue(value: string) {
     parsed.getUTCMonth() === month - 1 &&
     parsed.getUTCDate() === day
   );
+}
+
+function parseTelegramUserId(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isInteger(value) && value > 0 ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    if (!/^\d+$/.test(normalized)) {
+      return null;
+    }
+
+    const parsed = Number(normalized);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  return null;
 }
 
 function parsePositiveNumber(value: unknown) {
@@ -105,9 +128,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
+
+  const telegramUserId = parseTelegramUserId(body.telegramUserId);
+  if (!telegramUserId) {
+    return errorResponse("telegramUserId es obligatorio y debe ser un entero positivo.", 400);
+  }
+
+  const caller = await findUserByTelegramId(telegramUserId);
+  if (!caller || !isUserActive(caller.expiration_date)) {
+    return unauthorizedResponse();
+  }
+
+  if (!(await hasUserPermission(caller.id, N8N_PERMISSIONS.TRANSACTIONS_CREATE))) {
+    return errorResponse("No autorizado para cargar transacciones.", 403);
+  }
+
   const portfolio = await readPortfolioById(id);
 
   if (!portfolio) {
+    return errorResponse("Portfolio no encontrado.", 404);
+  }
+
+  if (portfolio.ownerUserId !== caller.id) {
     return errorResponse("Portfolio no encontrado.", 404);
   }
 
@@ -180,7 +222,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     portfolio.transactions = [transaction, ...portfolio.transactions];
     portfolio.assets = portfolio.assets.map((asset) => (asset.id === assetId ? portfolioAsset : asset));
 
-    const updatedPortfolio = await replacePortfolioById(id, portfolio);
+    const updatedPortfolio = await replacePortfolioById(id, portfolio, caller.id);
     if (!updatedPortfolio) {
       return errorResponse("Portfolio no encontrado.", 404);
     }
@@ -206,7 +248,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   };
 
   portfolio.transactions = [transaction, ...portfolio.transactions];
-  const updatedPortfolio = await replacePortfolioById(id, portfolio);
+  const updatedPortfolio = await replacePortfolioById(id, portfolio, caller.id);
   if (!updatedPortfolio) {
     return errorResponse("Portfolio no encontrado.", 404);
   }

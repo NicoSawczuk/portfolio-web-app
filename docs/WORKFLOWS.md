@@ -58,11 +58,14 @@ Creation:
 ```text
 AssetsPageClient
   -> POST /api/assets
+  -> API verifies session, then requires users_permissions { userId, action: "assets:create" } (403 otherwise)
   -> validate symbol/name and id_partner
   -> insertAsset()
   -> MongoDB assets.insertOne()
   -> client prepends asset
 ```
+
+PUT /api/assets requires `assets:edit` and DELETE /api/assets requires `assets:delete`, with the same 403 behavior.
 
 Retrieval:
 
@@ -76,18 +79,23 @@ Assets page
 Files:
 
 - `src/components/AssetsPageClient.tsx`
+- `src/app/assets/page.tsx` (loads canCreate/canEdit/canDelete/canRefresh for the view)
 - `src/app/api/assets/route.ts`
 - `src/lib/asset-db.ts`
+- `src/lib/user-permissions-db.ts`
+- `src/lib/permissions.ts`
 
 Important:
 
 - Creating a global asset does not add it to any portfolio until a buy/sell transaction references it.
+- Asset permissions are deny-by-default: no `users_permissions` document means the action is blocked (403) and the button is hidden. There is no management UI; permissions are granted/revoked directly in MongoDB.
 
 ## Asset Price Refresh
 
 ```text
-AssetsPageClient refresh button
+AssetsPageClient refresh button (rendered only with canRefresh)
   -> GET /api/assets?forceRefresh=1
+  -> API verifies session, then requires users_permissions { userId, action: "assets:refresh" } (403 otherwise)
   -> readAssets()
   -> refreshAssetsQuotesWithCache(assets, { forceRefresh: true })
   -> Finnhub, CoinMarketCap and BYMA requests run with Promise.allSettled
@@ -225,11 +233,14 @@ External caller
   -> POST /api/integrations/portfolios/[id]/transactions
   -> x-api-key must equal PORTFOLIO_TRANSACTIONS_API_KEY
   -> parse JSON
-  -> readPortfolioById(id) without ownerUserId
+  -> telegramUserId must be a positive integer (400 otherwise)
+  -> findUserByTelegramId(telegramUserId); unknown or expired user is rejected (401)
+  -> caller must hold users_permissions { userId, action: "n8n_transactions:create" } (403 otherwise)
+  -> readPortfolioById(id); missing or foreign portfolio returns 404
   -> validate type/date/price/notes
-  -> for buy/sell: validate assetId/quantity and read global asset
+  -> for buy/sell: validate symbol/quantity and read global asset by symbol
   -> prepend transaction
-  -> replacePortfolioById(id, portfolio) without ownerUserId
+  -> replacePortfolioById(id, portfolio, caller.id) scoped by ownerUserId
   -> return { ok, portfolioId, transactionId, transaction }
 ```
 
@@ -240,8 +251,8 @@ Files:
 Important difference from UI API:
 
 - Stricter date/positive number validation.
-- Uses API key instead of user session.
-- Is not scoped by owner user id.
+- Uses API key plus `telegramUserId` instead of user session.
+- Is scoped by owner user id: the portfolio must belong to the `telegramUserId` caller.
 - Rejects with 400 if the asset currency != portfolio currency (same invariant as the UI API).
 
 ## Transactions Export

@@ -47,28 +47,33 @@ Body:
 ```json
 {
 	"type": "buy",
-	"assetId": "<asset-id>",
+	"symbol": "BTC",
 	"quantity": 0.5,
 	"price": 35000,
 	"date": "2026-07-30",
-	"notes": "optional"
+	"notes": "optional",
+	"telegramUserId": 123456789
 }
 ```
 
 Validation rules:
 
 - `type` is required and must be one of: `buy`, `sell`, `cash_in`, `cash_out`.
+- `telegramUserId` is required, must be a positive integer, and must match a `users.telegramUserId` whose account is active, holds the `n8n_transactions:create` permission, and owns the portfolio in the URL. Otherwise the request is rejected (`400`/`401`/`403`, or `404` if the portfolio does not belong to that user).
+
+- `type` is required and must be one of: `buy`, `sell`, `cash_in`, `cash_out`.
 - `date` is required and must use `YYYY-MM-DD`.
 - `price` is required and must be greater than `0`.
-- For `buy`/`sell`: `assetId` and `quantity > 0` are required.
-- For `cash_in`/`cash_out`: `assetId` and `quantity` are ignored.
+- For `buy`/`sell`: `symbol` (e.g. `BTC`, `AAPL`, `SPY`, resolved via `readAssetBySymbol`) and `quantity > 0` are required.
+- For `cash_in`/`cash_out`: `symbol` and `quantity` are ignored.
 
 Responses:
 
-- `200` with `{ ok, portfolioId, transactionId, transaction }` when persisted.
-- `401` when API key is missing/invalid.
+- `201` with `{ ok, portfolioId, transactionId, transaction }` when persisted.
+- `401` when API key is missing/invalid, or the `telegramUserId` caller is unknown/inactive.
+- `403` when the caller lacks the `n8n_transactions:create` permission.
 - `400` for payload validation errors.
-- `404` when portfolio or asset is not found.
+- `404` when portfolio or asset is not found (including portfolios owned by another user).
 - `500` when `PORTFOLIO_TRANSACTIONS_API_KEY` is not configured.
 
 ## Finnhub Integration

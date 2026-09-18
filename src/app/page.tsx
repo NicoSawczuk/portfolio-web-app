@@ -254,7 +254,6 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
           <div className="card card--panel home-section">
             <div className="card-header">
               <h2 className="card-title">Inversión por portfolio</h2>
-              <span className="home-section-chevron" aria-hidden="true">›</span>
             </div>
             <div className="card-content home-section-content">
               <div className="home-cards-grid home-donut-grid">
@@ -285,7 +284,6 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
           <div className="card card--panel home-section">
             <div className="card-header">
               <h2 className="card-title">Ganancias por portfolio</h2>
-              <span className="home-section-chevron" aria-hidden="true">›</span>
             </div>
             <div className="card-content home-section-content">
               <div className="home-list home-gains-list">
@@ -318,7 +316,6 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
           <div className="card card--panel home-section">
             <div className="card-header">
               <h2 className="card-title">Activos por portfolio</h2>
-              <span className="home-section-chevron" aria-hidden="true">›</span>
             </div>
             <div className="card-content home-section-content">
               <div className="home-cards-grid home-cards-grid--wide">
