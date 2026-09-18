@@ -1460,6 +1460,14 @@
   margin-top: 0.5rem;
 }
 
+/* iOS hace auto-zoom al enfocar controles con font-size < 16px y no siempre
+   lo revierte; los formularios del modal usan 16px para evitarlo. */
+.modal input,
+.modal select,
+.modal textarea {
+  font-size: 16px;
+}
+
 .modal-textarea {
   min-height: 6.875rem;
   resize: vertical;
@@ -1895,6 +1903,15 @@ body:has(.modal-backdrop) {
     min-width: 0;
     height: 2.375rem;
     padding: 0.5rem 0.75rem;
+  }
+
+  /* iOS hace auto-zoom al enfocar controles con font-size < 16px.
+     En mobile ningún campo editable queda por debajo de 16px
+     (los modales ya lo tienen por regla base). */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
 }
 
