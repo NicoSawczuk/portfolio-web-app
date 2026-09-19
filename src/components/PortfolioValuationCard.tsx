@@ -1,5 +1,8 @@
+"use client";
+
 import type { AssetCurrency } from "@/lib/portfolio";
 import { formatUsdEquivalent, getUsdEquivalent } from "@/lib/portfolio-format";
+import { useDollarQuote } from "@/lib/dollar-quote-context";
 
 interface PortfolioValuationCardProps {
   totalMarketValue: number;
@@ -10,7 +13,6 @@ interface PortfolioValuationCardProps {
   className?: string;
   currency?: AssetCurrency;
   marketValueByCurrency?: { USD: number; ARS: number };
-  dollarQuoteSell?: number | null;
 }
 
 function formatCurrency(value: number, currency: "USD" | "ARS" = "USD") {
@@ -56,8 +58,8 @@ export default function PortfolioValuationCard({
   className,
   currency = "USD",
   marketValueByCurrency,
-  dollarQuoteSell,
 }: PortfolioValuationCardProps) {
+  const { sellQuote: dollarQuoteSell } = useDollarQuote();
   const pnlPositive = totalPnl > 0;
   const pnlNegative = totalPnl < 0;
   const showArsBreakdown = currency === "USD" && (marketValueByCurrency?.ARS ?? 0) > 0;

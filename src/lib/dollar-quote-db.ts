@@ -60,15 +60,45 @@ export async function readLatestDollarQuote(): Promise<DollarQuote | null> {
   return doc ? normalizeDollarQuote(doc) : null;
 }
 
-export async function readDollarQuotesHistory(): Promise<DollarQuote[]> {
+export async function readDollarQuotesHistory(
+  page = 1,
+  pageSize = 20,
+  search = ""
+): Promise<{ quotes: DollarQuote[]; total: number }> {
   const collection = await getDollarQuotesCollection();
-  const docs = await collection.find({}, { projection: { _id: 0 } }).sort({ datetime: -1, _id: -1 }).toArray();
-  return docs.map(normalizeDollarQuote);
+  const filter = buildSearchFilter(search);
+  const total = await collection.countDocuments(filter);
+  const docs = await collection
+    .find(filter, { projection: { _id: 0 } })
+    .sort({ datetime: -1, _id: -1 })
+    .skip((page - 1) * pageSize)
+    .limit(pageSize)
+    .toArray();
+  return { quotes: docs.map(normalizeDollarQuote), total };
 }
 
-export async function countDollarQuotes(): Promise<number> {
+function buildSearchFilter(search: string) {
+  if (!search.trim()) return {};
+  const tokens = search
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (tokens.length === 0) return {};
+  const regexPatterns = tokens.map((t) => new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+  return {
+    $or: [
+      { datetime: { $in: regexPatterns } },
+      { id: { $in: regexPatterns } },
+    ],
+  };
+}
+
+export async function countDollarQuotes(search = ""): Promise<number> {
   const collection = await getDollarQuotesCollection();
-  return collection.countDocuments({});
+  return collection.countDocuments(buildSearchFilter(search));
 }
 
 export async function insertDollarQuote(input: {

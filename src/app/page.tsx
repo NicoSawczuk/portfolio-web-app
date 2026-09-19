@@ -9,6 +9,7 @@ import { formatUsdEquivalent } from "@/lib/portfolio-format";
 import { readLatestDollarQuote } from "@/lib/dollar-quote-db";
 import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import HomeHeroCard from "@/components/HomeHeroCard";
+import { DollarQuoteProvider } from "@/lib/dollar-quote-context";
 import type { Asset, AssetCurrency } from "@/lib/portfolio";
 
 export const dynamic = "force-dynamic";
@@ -243,7 +244,9 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
 
   return (
     <>
-      <HomeHeroCard totals={totalsByCurrency} dollarQuoteSell={dollarQuoteSell} />
+      <DollarQuoteProvider initialSellQuote={dollarQuoteSell}>
+        <HomeHeroCard totals={totalsByCurrency} />
+      </DollarQuoteProvider>
 
       {portfolioPerformances.length === 0 ? (
         <div className="portfolio-empty-state">

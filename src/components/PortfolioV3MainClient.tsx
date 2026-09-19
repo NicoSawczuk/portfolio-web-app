@@ -24,10 +24,9 @@ interface PortfolioV3MainClientProps {
   portfolioId: string;
   initialPortfolio: Portfolio;
   initialAssets: Asset[];
-  dollarQuoteSell?: number | null;
 }
 
-export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, initialAssets, dollarQuoteSell }: PortfolioV3MainClientProps) {
+export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, initialAssets }: PortfolioV3MainClientProps) {
   const [portfolio, setPortfolio] = useState(initialPortfolio);
   const [activeTab, setActiveTab] = useState<"open" | "closed">("open");
   const [showAmounts, setShowAmounts] = useState(true);
@@ -104,7 +103,6 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
                   onToggleVisibility={() => setShowAmounts((value) => !value)}
                   currency={summary.currency}
                   marketValueByCurrency={summary.marketValueByCurrency}
-                  dollarQuoteSell={dollarQuoteSell}
                 />
               </div>
             ) : null}

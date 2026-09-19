@@ -28,12 +28,12 @@ export default async function TipoCambioPage() {
     // ensureDailyDollarQuote ya loguea; la página muestra MongoDB igual.
   }
 
-  const [current, all, permissions] = await Promise.all([
+  const [current, historyResult, permissions] = await Promise.all([
     readLatestDollarQuote(),
-    readDollarQuotesHistory(),
+    readDollarQuotesHistory(1, INITIAL_PAGE_SIZE),
     getUserDollarPermissions(session.userId),
   ]);
-  const initialHistory = all.slice(0, INITIAL_PAGE_SIZE);
+  const initialHistory = historyResult.quotes;
 
   return (
     <main className="page">
@@ -55,7 +55,7 @@ export default async function TipoCambioPage() {
         <TipoCambioClient
           initialCurrent={current}
           initialHistory={initialHistory}
-          initialTotal={all.length}
+          initialTotal={historyResult.total}
           initialPageSize={INITIAL_PAGE_SIZE}
           initialPermissions={permissions}
         />

@@ -5,6 +5,7 @@ import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { readPortfolioById } from "@/lib/portfolio-db";
 import { readLatestDollarQuote } from "@/lib/dollar-quote-db";
 import PortfolioV3AssetDetailClient from "@/components/PortfolioV3AssetDetailClient";
+import { DollarQuoteProvider } from "@/lib/dollar-quote-context";
 
 export const dynamic = "force-dynamic";
 
@@ -33,12 +34,13 @@ export default async function PortfolioAssetDetailPage({ params }: PortfolioAsse
   }
 
   return (
-    <PortfolioV3AssetDetailClient
-      portfolioId={id}
-      symbol={decodeURIComponent(symbol)}
-      initialPortfolio={portfolio}
-      initialAssets={assets}
-      dollarQuoteSell={dollarQuote ? Number(dollarQuote.sell) : null}
-    />
+    <DollarQuoteProvider initialSellQuote={dollarQuote ? Number(dollarQuote.sell) : null}>
+      <PortfolioV3AssetDetailClient
+        portfolioId={id}
+        symbol={decodeURIComponent(symbol)}
+        initialPortfolio={portfolio}
+        initialAssets={assets}
+      />
+    </DollarQuoteProvider>
   );
 }

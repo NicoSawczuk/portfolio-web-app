@@ -17,13 +17,13 @@ import {
   getAssetColor,
 } from "@/lib/portfolio-format";
 import PortfolioTransactionsTable from "@/components/PortfolioTransactionsTable";
+import { useDollarQuote } from "@/lib/dollar-quote-context";
 
 interface PortfolioV3AssetDetailClientProps {
   portfolioId: string;
   symbol: string;
   initialPortfolio: Portfolio;
   initialAssets: Asset[];
-  dollarQuoteSell?: number | null;
 }
 
 export default function PortfolioV3AssetDetailClient({
@@ -31,8 +31,8 @@ export default function PortfolioV3AssetDetailClient({
   symbol,
   initialPortfolio,
   initialAssets,
-  dollarQuoteSell,
 }: PortfolioV3AssetDetailClientProps) {
+  const { sellQuote: dollarQuoteSell } = useDollarQuote();
   const [portfolio, setPortfolio] = useState(initialPortfolio);
   const analytics = useMemo(() => buildPortfolioPositionsAnalytics(portfolio, initialAssets), [initialAssets, portfolio]);
 
