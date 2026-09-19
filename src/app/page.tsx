@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { readAssets } from "@/lib/asset-db";
 import { readPortfolios } from "@/lib/portfolio-db";
 import { calculatePortfolioPerformance } from "@/lib/portfolio-summary";
+import { formatUsdEquivalent } from "@/lib/portfolio-format";
+import { readLatestDollarQuote } from "@/lib/dollar-quote-db";
 import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import HomeHeroCard from "@/components/HomeHeroCard";
 import type { Asset, AssetCurrency } from "@/lib/portfolio";
@@ -60,7 +62,7 @@ function getAssetBarColor(type: Asset["type"]): string {
 }
 
 function HomeDonut({ pct, label }: { pct: number; label: string }) {
-  const size = 64;
+  const size = 72;
   const stroke = 8;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -130,6 +132,7 @@ interface HomeViewData {
   totalMarketByCurrency: Record<string, number>;
   portfolioDistribution: HomePortfolioItem[];
   portfolioGainsRanking: HomePortfolioItem[];
+  dollarQuoteSell: number | null;
 }
 
 const CURRENCY_ORDER: AssetCurrency[] = ["USD", "ARS"];
@@ -144,7 +147,11 @@ function sortCurrencies(a: AssetCurrency, b: AssetCurrency) {
 }
 
 async function getHomeViewData(userId: string): Promise<HomeViewData> {
-  const [portfolios, assets] = await Promise.all([readPortfolios(userId), readAssets({ minimal: true })]);
+  const [portfolios, assets, dollarQuote] = await Promise.all([
+    readPortfolios(userId),
+    readAssets({ minimal: true }),
+    readLatestDollarQuote(),
+  ]);
 
   const portfolioPerformances = portfolios
     .map((portfolio) => {
@@ -207,6 +214,7 @@ async function getHomeViewData(userId: string): Promise<HomeViewData> {
     totalMarketByCurrency,
     portfolioDistribution,
     portfolioGainsRanking,
+    dollarQuoteSell: dollarQuote ? Number(dollarQuote.sell) : null,
   };
 }
 
@@ -230,11 +238,12 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
     totalMarketByCurrency,
     portfolioDistribution,
     portfolioGainsRanking,
+    dollarQuoteSell,
   } = await dataPromise;
 
   return (
     <>
-      <HomeHeroCard totals={totalsByCurrency} />
+      <HomeHeroCard totals={totalsByCurrency} dollarQuoteSell={dollarQuoteSell} />
 
       {portfolioPerformances.length === 0 ? (
         <div className="portfolio-empty-state">
@@ -261,6 +270,7 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
                 const currency = performance.currency;
                 const currencyTotal = totalMarketByCurrency[currency] ?? 0;
                 const share = currencyTotal > 0 ? (performance.totalMarketValue / currencyTotal) * 100 : 0;
+                const usdEquivalent = formatUsdEquivalent(performance.totalMarketValue, currency, dollarQuoteSell);
 
                 return (
                   <Link
@@ -273,7 +283,10 @@ async function HomeStreamedContent({ dataPromise }: { dataPromise: Promise<HomeV
                       <span className="home-currency-badge">{currency}</span>
                     </p>
                     <HomeDonut pct={share} label={`${share.toFixed(1)}%`} />
-                    <p className="home-donut-value">{formatCurrency(performance.totalMarketValue, currency)}</p>
+                    <div>
+                      <p className="home-donut-value">{formatCurrency(performance.totalMarketValue, currency)}</p>
+                      {usdEquivalent ? <p className="usd-equivalent">{usdEquivalent}</p> : null}
+                    </div>
                   </Link>
                 );
               })}

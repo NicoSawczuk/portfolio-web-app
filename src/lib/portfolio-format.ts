@@ -25,6 +25,37 @@ export function formatCurrency(value: number, currency: AssetCurrency = "USD") {
   return `${prefix}${currency} ${amountFormatter.format(Math.abs(value))}`;
 }
 
+export function getUsdEquivalent(
+  valueInArs: number,
+  currency: AssetCurrency,
+  sellQuote: number | null | undefined
+): number | null {
+  if (currency !== "ARS") {
+    return null;
+  }
+
+  const sell = Number(sellQuote);
+  if (!Number.isFinite(sell) || sell <= 0) {
+    return null;
+  }
+
+  const equivalent = valueInArs / sell;
+  return Number.isFinite(equivalent) ? equivalent : null;
+}
+
+export function formatUsdEquivalent(
+  valueInArs: number,
+  currency: AssetCurrency,
+  sellQuote: number | null | undefined
+): string | null {
+  const equivalent = getUsdEquivalent(valueInArs, currency, sellQuote);
+  if (equivalent === null) {
+    return null;
+  }
+
+  return `≈ ${formatCurrency(equivalent, "USD")}`;
+}
+
 export function formatSignedCurrency(value: number, currency: AssetCurrency = "USD") {
   if (value > 0) {
     return `+${formatCurrency(value, currency)}`;

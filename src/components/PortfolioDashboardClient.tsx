@@ -33,6 +33,7 @@ const portfolioCurrencies: Array<{ value: AssetCurrency; label: string }> = [
 interface PortfolioDashboardClientProps {
   initialPortfolios: Portfolio[];
   initialAssets: Asset[];
+  dollarQuoteSell?: number | null;
 }
 
 function PlusIcon() {
@@ -75,7 +76,7 @@ function TrashIcon() {
   );
 }
 
-export default function PortfolioDashboardClient({ initialPortfolios, initialAssets }: PortfolioDashboardClientProps) {
+export default function PortfolioDashboardClient({ initialPortfolios, initialAssets, dollarQuoteSell }: PortfolioDashboardClientProps) {
   const [portfolios, setPortfolios] = useState(initialPortfolios);
   const [assets] = useState(initialAssets);
   const [showAmounts, setShowAmounts] = useState(true);
@@ -299,6 +300,7 @@ export default function PortfolioDashboardClient({ initialPortfolios, initialAss
                         className="w-full"
                         currency={summary?.currency ?? getPortfolioCurrency(portfolio)}
                         marketValueByCurrency={summary?.marketValueByCurrency}
+                        dollarQuoteSell={dollarQuoteSell}
                       />
                     </div>
                   </div>

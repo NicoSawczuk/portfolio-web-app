@@ -12,6 +12,7 @@ import {
   formatPercent,
   formatSignedCurrency,
   formatUnsignedPercent,
+  formatUsdEquivalent,
   getAssetTypeChipClass,
   getAssetColor,
 } from "@/lib/portfolio-format";
@@ -22,6 +23,7 @@ interface PortfolioV3AssetDetailClientProps {
   symbol: string;
   initialPortfolio: Portfolio;
   initialAssets: Asset[];
+  dollarQuoteSell?: number | null;
 }
 
 export default function PortfolioV3AssetDetailClient({
@@ -29,6 +31,7 @@ export default function PortfolioV3AssetDetailClient({
   symbol,
   initialPortfolio,
   initialAssets,
+  dollarQuoteSell,
 }: PortfolioV3AssetDetailClientProps) {
   const [portfolio, setPortfolio] = useState(initialPortfolio);
   const analytics = useMemo(() => buildPortfolioPositionsAnalytics(portfolio, initialAssets), [initialAssets, portfolio]);
@@ -60,6 +63,7 @@ export default function PortfolioV3AssetDetailClient({
   const color = getAssetColor(openPosition.assetId, 0);
   const formatCurrencyByVisibility = (value: number) => formatCurrency(value, openPosition.currency);
   const isPositive = openPosition.pnl >= 0;
+  const usdEquivalent = formatUsdEquivalent(openPosition.marketValue, openPosition.currency, dollarQuoteSell);
 
   return (
     <main className="page">
@@ -87,6 +91,7 @@ export default function PortfolioV3AssetDetailClient({
             <div className="asset-detail-hero">
               <p className="asset-detail-label">Valor actual</p>
               <p className="asset-detail-hero-value">{formatCurrencyByVisibility(openPosition.marketValue)}</p>
+              {usdEquivalent ? <p className="usd-equivalent">{usdEquivalent}</p> : null}
             </div>
             <div>
               <p className="asset-detail-label">Ganancia</p>

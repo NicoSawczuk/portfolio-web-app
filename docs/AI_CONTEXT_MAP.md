@@ -28,12 +28,13 @@ Then select the task path below.
 | Pricing / integrations | `PROJECT.md`, relevant integration docs | `src/lib/finnhub-service.ts`, `src/lib/coinmarketcap-service.ts`, `src/lib/byma-service.ts`, relevant API routes (`/api/byma/cedears`) |
 | Holdings / positions | `DOMAIN.md`, `CALCULATIONS.md` | `src/lib/portfolio-positions.ts`, `src/lib/portfolio.ts` |
 | Performance / metrics | `CALCULATIONS.md` | `src/lib/portfolio-summary.ts`, `src/lib/portfolio-positions.ts` |
-| Dashboard / portfolio UI | `ARCHITECTURE.md`, `WORKFLOWS.md` | `src/app/page.tsx`, `src/components/HomeHeroCard.tsx`, `src/components/PortfolioDashboardClient.tsx`, `src/components/PortfolioV3MainClient.tsx` |
-| Transaction UI | `WORKFLOWS.md`, `DOMAIN.md` | `src/components/AddTransactionButton.tsx`, `src/components/PortfolioTransactionsTable.tsx` |
+| Dashboard / portfolio UI | `ARCHITECTURE.md`, `VISUAL.md`, `WORKFLOWS.md` | `src/app/page.tsx`, `src/components/HomeHeroCard.tsx`, `src/components/PortfolioDashboardClient.tsx`, `src/components/PortfolioV3MainClient.tsx` |
+| Transaction UI | `VISUAL.md`, `WORKFLOWS.md`, `DOMAIN.md` | `src/components/AddTransactionButton.tsx`, `src/components/PortfolioTransactionsTable.tsx` |
 | Export / Import (Settings) | `PROJECT.md`, `WORKFLOWS.md` | `src/app/settings/page.tsx` (`/export` redirects there), `src/components/TransactionsExportPanel.tsx` (currency columns: `portfolio_currency`, `transaction_currency`, `asset_currency`, `asset_price_currency`, `asset_price_ars`), `src/components/TransactionsImportPanel.tsx`, `src/app/api/portfolios/import-transactions/route.ts` |
 | API / backend flow | `ARCHITECTURE.md`, `WORKFLOWS.md` | relevant `src/app/api/**` route plus its service/data dependencies |
 | Database / persistence | `DATABASE.md` | relevant `src/lib/*-db.ts`, route/service using it |
 | Cross-cutting change | `ARCHITECTURE.md` + affected domain docs | trace only the changed flow and its consumers |
+| Visual / theming / styling | `VISUAL.md`, `ARCHITECTURE.md` (Theming) | `src/app/layout.tsx`, `src/components/ThemeProvider.tsx`, `src/components/ThemeToggle.tsx`, `src/app/globals.css`, `src/app/portfolio-ui.css` |
 
 ## High-risk expansion
 

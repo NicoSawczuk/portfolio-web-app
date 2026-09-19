@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { readAssets } from "@/lib/asset-db";
 import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { readPortfolios } from "@/lib/portfolio-db";
+import { readLatestDollarQuote } from "@/lib/dollar-quote-db";
 import PortfolioDashboardClient from "@/components/PortfolioDashboardClient";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,17 @@ export default async function PortfoliosPage() {
     redirect("/login");
   }
 
-  const [portfolios, assets] = await Promise.all([readPortfolios(session.userId), readAssets({ minimal: true })]);
+  const [portfolios, assets, dollarQuote] = await Promise.all([
+    readPortfolios(session.userId),
+    readAssets({ minimal: true }),
+    readLatestDollarQuote(),
+  ]);
 
-  return <PortfolioDashboardClient initialPortfolios={portfolios} initialAssets={assets} />;
+  return (
+    <PortfolioDashboardClient
+      initialPortfolios={portfolios}
+      initialAssets={assets}
+      dollarQuoteSell={dollarQuote ? Number(dollarQuote.sell) : null}
+    />
+  );
 }

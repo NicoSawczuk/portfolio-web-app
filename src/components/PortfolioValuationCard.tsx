@@ -1,4 +1,5 @@
 import type { AssetCurrency } from "@/lib/portfolio";
+import { formatUsdEquivalent, getUsdEquivalent } from "@/lib/portfolio-format";
 
 interface PortfolioValuationCardProps {
   totalMarketValue: number;
@@ -9,6 +10,7 @@ interface PortfolioValuationCardProps {
   className?: string;
   currency?: AssetCurrency;
   marketValueByCurrency?: { USD: number; ARS: number };
+  dollarQuoteSell?: number | null;
 }
 
 function formatCurrency(value: number, currency: "USD" | "ARS" = "USD") {
@@ -54,10 +56,12 @@ export default function PortfolioValuationCard({
   className,
   currency = "USD",
   marketValueByCurrency,
+  dollarQuoteSell,
 }: PortfolioValuationCardProps) {
   const pnlPositive = totalPnl > 0;
   const pnlNegative = totalPnl < 0;
   const showArsBreakdown = currency === "USD" && (marketValueByCurrency?.ARS ?? 0) > 0;
+  const usdEquivalent = getUsdEquivalent(totalMarketValue, currency, dollarQuoteSell);
 
   const ArrowIcon = pnlPositive ? "↑" : pnlNegative ? "↓" : "→";
 
@@ -68,6 +72,11 @@ export default function PortfolioValuationCard({
           <p className="text-[1.6rem] font-bold leading-none tracking-[-0.04em] text-white sm:text-[1.9rem]">
             {showAmounts ? formatCurrency(totalMarketValue, currency) : "••••••"}
           </p>
+          {usdEquivalent !== null ? (
+            <p className="usd-equivalent">
+              {showAmounts ? formatUsdEquivalent(totalMarketValue, currency, dollarQuoteSell) : "••••••"}
+            </p>
+          ) : null}
           {showArsBreakdown ? (
             <p className="mt-1 text-xs font-medium text-slate-400">
               {showAmounts

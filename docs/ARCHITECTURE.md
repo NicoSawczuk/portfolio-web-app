@@ -38,8 +38,11 @@ public/logos/          Logo and favicon assets
 | `/portfolios/[id]/assets/[symbol]` | `src/app/portfolios/[id]/assets/[symbol]/page.tsx` | Open position detail by symbol. |
 | `/portfolios/[id]/closed/[assetId]` | `src/app/portfolios/[id]/closed/[assetId]/page.tsx` | Closed position detail by asset id. |
 | `/assets` | `src/app/assets/page.tsx` | Global assets management. |
-| `/settings` | `src/app/settings/page.tsx` | Configuración: transaction export + JSON import. |
-| `/export` | `src/app/export/page.tsx` | Legacy redirect to `/settings`. |
+| `/settings` | `src/app/settings/page.tsx` | Hub de Configuración (navegación). |
+| `/settings/exchange-rate` | `src/app/settings/exchange-rate/page.tsx` | Tipo de cambio: cotización actual + histórico (lazy daily check). |
+| `/settings/import-export` | `src/app/settings/import-export/page.tsx` | Importar / Exportar (contenido movido desde Configuración). |
+| `/configuracion`, `/configuracion/tipo-cambio`, `/configuracion/importar-exportar` | legacy redirects | Redirects a sus equivalentes en `/settings/*`. |
+| `/export` | `src/app/export/page.tsx` | Legacy redirect a `/settings/import-export`. |
 
 Most data pages export `dynamic = "force-dynamic"` to avoid static caching. `src/app/portfolios/[id]/page.tsx` does not explicitly set it, but it calls `cookies()`, so it is request-bound.
 
@@ -80,6 +83,7 @@ Important:
 - The active theme lives in `<html data-theme>` (`"light"` | `"dark"`, default `"dark"`).
 - `src/components/ThemeProvider.tsx` owns the state, persists it in `localStorage` under `portfolio-theme`, falls back to `prefers-color-scheme` and follows OS changes until the user picks a theme; an inline script in `src/app/layout.tsx` applies it pre-hydration. `src/components/ThemeToggle.tsx` is the header toggle.
 - Dark styling is hardcoded in components; light-mode remaps live in `src/app/globals.css` as `[data-theme="light"]` overrides. Tailwind v4 `divide-*` targets `:where(& > :not(:last-child))`, so overrides must use that shape (not the v3 `~` sibling selector) to also cover the first row.
+- Full visual contract, palette tokens, reusable classes and UI rules: `VISUAL.md` (base since commit `7277e50`). `VISUAL.md` is the source of truth for the visual system; this section is only a summary.
 
 ## Backend Architecture
 
@@ -93,6 +97,7 @@ API routes:
 | `/api/auth/me` | GET | `src/app/api/auth/me/route.ts` |
 | `/api/assets` | GET, POST, PUT, DELETE | `src/app/api/assets/route.ts` |
 | `/api/byma/cedears` | GET, POST | `src/app/api/byma/cedears/route.ts` |
+| `/api/dollar-quotes` | GET, POST, DELETE | `src/app/api/dollar-quotes/route.ts` |
 | `/api/portfolios` | GET, POST, PUT, DELETE | `src/app/api/portfolios/route.ts` |
 | `/api/portfolios/[id]` | GET, POST, PUT, DELETE | `src/app/api/portfolios/[id]/route.ts` |
 | `/api/integrations/portfolios/[id]/transactions` | POST | `src/app/api/integrations/portfolios/[id]/transactions/route.ts` |
@@ -137,7 +142,9 @@ Authorization:
 - API routes return 401 if unauthenticated, except public auth routes.
 - Portfolio reads/writes from normal UI include `ownerUserId` filter.
 - Asset mutations require a `users_permissions` document (deny-by-default): `POST /api/assets` needs `assets:create`, `PUT` needs `assets:edit`, `DELETE` needs `assets:delete`, and `GET /api/assets?forceRefresh=1` needs `assets:refresh`. Missing permission returns 403. Plain `GET /api/assets` stays open to authenticated users.
+- Dollar quote mutations follow the same pattern: `POST /api/dollar-quotes` (`refresh`/`manual`) needs `dollar:create`, `DELETE` needs `dollar:delete` (403 otherwise). Plain `GET /api/dollar-quotes` stays open to authenticated users. The per-row history edit button needs `dollar:edit` (it only prefills the manual editor; saving still requires `dollar:create`).
 - The assets server page loads `{ canCreate, canEdit, canDelete, canRefresh }` and `AssetsPageClient` hides the corresponding buttons and guards the handlers client-side.
+- The exchange-rate server page loads `{ canCreate, canEdit, canDelete }` and `TipoCambioClient` hides the refresh/edit/delete affordances and guards the handlers client-side.
 - `GET /api/auth/me` and `POST /api/auth/login` return `permissions: string[]`.
 - Permissions are managed directly in MongoDB; there is no management UI or API.
 - Integration endpoint requires `x-api-key` plus a body `telegramUserId` that must match an active user holding `n8n_transactions:create` and owning the portfolio in the URL (foreign portfolios return 404).
@@ -166,6 +173,16 @@ BYMA (CEDEARs):
 - Returns the full CEDEAR list (`symbol`, `bidPrice`, ...); the service filters by requested symbols and keeps only finite `bidPrice > 0`. The full dump is cached in memory with TTL (`BYMA_CEDEARS_TTL_MINUTES`, default 15) and concurrent callers share the in-flight request.
 - Eligible: `cedear` assets only. Refresh writes `price_ars` (ARS) and never touches `price`; invalid/out-of-market quotes are discarded without overwriting the stored price.
 - Direct access: `GET /api/byma/cedears?symbols=AAPL,MELI` or `POST /api/byma/cedears` with `{ "symbols": [...] }`.
+
+DolarAPI (dólar oficial):
+
+- File: `src/lib/dolarapi-service.ts`.
+- Base URL from `DOLAR_API_URL` (default `https://dolarapi.com`), path `/v1/dolares/oficial`.
+- Maps `compra` → `buy`, `venta` → `sell`, `fechaActualizacion` → `datetime`.
+- Persistence: `src/lib/dollar-quote-db.ts` (`dollar_quotes` + `dollar_quote_daily_checks`).
+- Central rule: `src/lib/dollar-quote-service.ts` (`saveDollarQuoteIfChanged()` used by daily check, manual refresh and manual edit; daily check runs lazily from `/configuracion/tipo-cambio` via `ensureDailyDollarQuote()`, at most one successful consultation per day in `APP_TIMEZONE`).
+- Internal API: `GET /api/dollar-quotes` (current + paginated history with `page`/`pageSize`/`search`), `POST` with `{ action: "refresh" }` or `{ action: "manual", buy, sell }`, `DELETE` with `{ id }`.
+- Normal rendering reads MongoDB only; DolarAPI is called on daily check or explicit refresh.
 
 ## Caching And Revalidation
 

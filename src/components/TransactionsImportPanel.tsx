@@ -209,11 +209,6 @@ export default function TransactionsImportPanel({ portfolios }: TransactionsImpo
               <HelpIcon />
             </button>
           </div>
-          <p className="card-description">
-            Subí un JSON con el <code>portfolioId</code> y un array de <code>transactions</code> con{" "}
-            <code>type</code>, <code>symbol</code>, <code>quantity</code>, <code>price</code> y{" "}
-            <code>date</code>.
-          </p>
         </div>
         <button
           type="button"
@@ -356,7 +351,7 @@ export default function TransactionsImportPanel({ portfolios }: TransactionsImpo
             ) : (
               <p>
                 Se importarán {previewCount} transacciones al portfolio{" "}
-                <span className="font-semibold text-white">
+                <span className="break-words font-semibold text-white">
                   {targetPortfolio ? `${targetPortfolio.name} (${targetPortfolio.currency})` : parsed.portfolioId || selectedPortfolioId}
                 </span>
                 .

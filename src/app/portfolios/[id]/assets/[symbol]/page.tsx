@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { readAssets } from "@/lib/asset-db";
 import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { readPortfolioById } from "@/lib/portfolio-db";
+import { readLatestDollarQuote } from "@/lib/dollar-quote-db";
 import PortfolioV3AssetDetailClient from "@/components/PortfolioV3AssetDetailClient";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,11 @@ export default async function PortfolioAssetDetailPage({ params }: PortfolioAsse
     redirect("/login");
   }
 
-  const [portfolio, assets] = await Promise.all([readPortfolioById(id, session.userId), readAssets({ minimal: true })]);
+  const [portfolio, assets, dollarQuote] = await Promise.all([
+    readPortfolioById(id, session.userId),
+    readAssets({ minimal: true }),
+    readLatestDollarQuote(),
+  ]);
 
   if (!portfolio) {
     notFound();
@@ -33,6 +38,7 @@ export default async function PortfolioAssetDetailPage({ params }: PortfolioAsse
       symbol={decodeURIComponent(symbol)}
       initialPortfolio={portfolio}
       initialAssets={assets}
+      dollarQuoteSell={dollarQuote ? Number(dollarQuote.sell) : null}
     />
   );
 }

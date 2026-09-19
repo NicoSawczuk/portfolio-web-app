@@ -217,7 +217,6 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
           <div className="card-header flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="card-title">Exportar transacciones</h2>
-              <p className="card-description">Descargá las transacciones de los portfolios seleccionados.</p>
             </div>
             <div className="flex items-center gap-2">
               <label className="sr-only" htmlFor="export-format">Formato de exportación</label>
@@ -259,14 +258,14 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
                       key={portfolio.id}
                       type="button"
                       onClick={() => togglePortfolioSelection(portfolio.id)}
-                    className={`button inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-medium sm:px-3 sm:text-sm ${
+                      className={`button inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-medium sm:px-3 sm:text-sm ${
                         isSelected
                           ? "button-primary border-sky-500"
                           : "button-secondary bg-[#0f172a]"
                       }`}
                     >
-                      {portfolio.name}
-                      <span className="inline-flex rounded-full border border-slate-700 px-1.5 py-px text-[10px] font-semibold opacity-80">
+                      <span className="min-w-0 break-words text-left">{portfolio.name}</span>
+                      <span className="inline-flex shrink-0 rounded-full border border-slate-700 px-1.5 py-px text-[10px] font-semibold opacity-80">
                         {getPortfolioCurrency(portfolio)}
                       </span>
                     </button>
