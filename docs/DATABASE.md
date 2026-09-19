@@ -91,6 +91,9 @@ Valid actions:
 | `assets:delete` | `DELETE /api/assets` and the delete button on the assets page. |
 | `assets:refresh` | `GET /api/assets?forceRefresh=1` and the refresh-quotes button on the assets page. |
 | `n8n_transactions:create` | `POST /api/integrations/portfolios/[id]/transactions` for the caller identified by `telegramUserId`. |
+| `dollar:create` | `POST /api/dollar-quotes` (`refresh`/`manual`) and the refresh + "Editar cotización" UI on the exchange-rate page. |
+| `dollar:edit` | Per-row edit button on the dollar history (prefills the manual editor; saving still requires `dollar:create`). |
+| `dollar:delete` | `DELETE /api/dollar-quotes` and the per-row delete button on the dollar history. |
 
 Indexes:
 
@@ -127,6 +130,8 @@ Consumers:
 
 - Assets API route (POST/PUT/DELETE/forceRefresh enforcement, 403 on missing permission).
 - Assets server page (loads `canCreate/canEdit/canDelete/canRefresh` for the view).
+- Dollar quotes API route (`POST` requires `dollar:create`, `DELETE` requires `dollar:delete`, 403 otherwise).
+- Exchange-rate server page (loads `canCreate/canEdit/canDelete` for the view; `dollar:edit` only gates the per-row prefill button).
 - `GET /api/auth/me` and `POST /api/auth/login` (return `permissions: string[]`).
 - Integration transactions endpoint (requires `n8n_transactions:create` for the `telegramUserId` caller).
 
@@ -276,6 +281,54 @@ Performance considerations:
 - Mutating one transaction replaces the entire portfolio document.
 - Large transaction histories can create large documents and larger write payloads.
 - No index can target embedded transactions for current runtime access because reads fetch whole portfolio documents by portfolio id.
+
+### `dollar_quotes`
+
+Purpose:
+
+- Stores official dollar quote history (`buy`, `sell`, `datetime`). Only real changes are recorded.
+
+Implementation:
+
+- `src/lib/dollar-quote-db.ts` (persistence), `src/lib/dollar-quote-service.ts` (central rule), `src/lib/dolarapi-service.ts` (DolarAPI client).
+
+Document structure:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | string | Generated from `ObjectId().toHexString()`. |
+| `buy` | number | Compra en ARS, > 0. |
+| `sell` | number | Venta en ARS, > 0. |
+| `datetime` | string | ISO timestamp (from DolarAPI `fechaActualizacion` or creation time for manual). |
+| `source` | string/undefined | `api` or `manual`. |
+
+Indexes:
+
+- `{ id: 1 }`, unique.
+- `{ datetime: -1 }`.
+
+Read operations:
+
+- `readLatestDollarQuote()` -> single doc sorted by `datetime` DESC.
+- `readDollarQuotesHistory()` -> all docs sorted by `datetime` DESC.
+
+Write operations:
+
+- `insertDollarQuote()` -> `insertOne` (only via `saveDollarQuoteIfChanged()` when `buy`/`sell` differ from latest).
+- `deleteDollarQuoteById(id)` -> `deleteOne` (history action chosen by user).
+
+### `dollar_quote_daily_checks`
+
+Purpose:
+
+- Tracks successful automatic DolarAPI consultations per day so the lazy daily check runs at most once per day. Consulting and recording are different rules: a day is marked even when the quote did not change.
+
+Document structure:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `date` | string | `YYYY-MM-DD` in `APP_TIMEZONE` (default `America/Argentina/Buenos_Aires`). |
+| `checkedAt` | string | ISO timestamp of the successful check. |
 
 ## Aggregations
 

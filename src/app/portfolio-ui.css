@@ -883,7 +883,7 @@ select.control {
 .home-donut-label {
   position: absolute;
   color: #e2e8f0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
@@ -892,6 +892,17 @@ select.control {
   color: #fff;
   font-size: 0.95rem;
   font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Equivalencia en dólares: referencia secundaria de un valor expresado en ARS. */
+.usd-equivalent {
+  margin: 0.2rem 0 0;
+  color: var(--portfolio-text-muted);
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
@@ -1190,20 +1201,25 @@ select.control {
 }
 
 .assets-list {
-  margin-top: 1.5rem;
-  border-top: 1px solid var(--portfolio-border);
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
 }
 
 .assets-row {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--portfolio-border);
+  border: 1px solid var(--portfolio-border);
+  border-radius: 18px;
+  background: var(--portfolio-surface-strong);
+  padding: 0.75rem;
+  transition: border-color 150ms ease;
 }
 
-.assets-row:last-child {
-  border-bottom: 0;
+.assets-row:hover {
+  border-color: var(--portfolio-border-hover);
 }
 
 .assets-symbol {
@@ -1222,12 +1238,6 @@ select.control {
   gap: 0.5rem;
 }
 
-.assets-row-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
 .assets-name {
   margin: 0;
   overflow: hidden;
@@ -1238,11 +1248,11 @@ select.control {
   white-space: nowrap;
 }
 
-.assets-row-side {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+.assets-price {
+  margin: 0;
+  color: var(--portfolio-text);
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
 .assets-row-foot {
@@ -1288,12 +1298,6 @@ select.control {
 .assets-quote-time {
   color: var(--portfolio-text-muted);
   font-size: 0.6875rem;
-}
-
-.assets-price {
-  color: var(--portfolio-text);
-  font-size: 0.875rem;
-  font-weight: 600;
 }
 
 .assets-row-action {
@@ -1970,13 +1974,13 @@ body:has(.modal-backdrop) {
     padding-right: 0.75rem;
   }
 
-  .assets-row {
-    gap: 0.5rem;
-    padding: 1rem 0;
+  .assets-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .assets-row-side {
-    gap: 0.75rem;
+  .assets-row {
+    gap: 0.625rem;
+    padding: 1rem;
   }
 
   .assets-price {
@@ -2319,11 +2323,6 @@ body:has(.modal-backdrop) {
 
 [data-theme="light"] .assets-list {
   margin-top: 1rem;
-  border-top-color: transparent;
-}
-
-[data-theme="light"] .assets-row {
-  border-bottom-color: var(--portfolio-border);
 }
 
 [data-theme="light"] .assets-row-action.button-secondary {
@@ -2461,14 +2460,15 @@ body:has(.modal-backdrop) {
   }
 }
 
-/* Donuts: aprovechar el ancho (sin filas huerfanas), mas chicos, valores protagonistas */
+/* Donuts: aprovechar el ancho (sin filas huerfanas), un poco mas chicos que el
+   default, con el numero siempre separado del anillo (incluso al 100%). */
 [data-theme="light"] .home-donut-wrap svg {
-  width: 52px;
-  height: 52px;
+  width: 64px;
+  height: 64px;
 }
 
 [data-theme="light"] .home-donut-label {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 
 [data-theme="light"] .home-donut-value {
@@ -2730,4 +2730,280 @@ body:has(.modal-backdrop) {
     width: 100%;
     min-width: 0;
   }
+}
+
+/*
+ * Tipo de cambio: cotización actual como foco principal e histórico
+ * como registro secundario. Una sola superficie por bloque.
+ */
+.dollar-current-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--portfolio-border);
+}
+
+.dollar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dollar-badge-actual {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: rgb(16 185 129 / 0.14);
+  color: rgb(110 231 183);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.dollar-update-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+
+.dollar-update-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--portfolio-text-muted);
+  font-size: 0.78rem;
+}
+
+.dollar-update-label strong {
+  color: var(--portfolio-text);
+  font-weight: 600;
+}
+
+.dollar-inline-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.dollar-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.dollar-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: center;
+  padding-top: 0.75rem;
+}
+
+.dollar-value {
+  min-width: 0;
+}
+
+.dollar-value-label {
+  margin: 0;
+  color: var(--portfolio-text-muted);
+  font-size: 0.78rem;
+}
+
+.dollar-value-number {
+  margin: 0.15rem 0 0;
+  color: var(--portfolio-text);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.dollar-value--divider {
+  border-left: 1px solid var(--portfolio-border);
+  padding-left: 0.75rem;
+}
+
+.dollar-edit-wrap {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dollar-edit-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.dollar-editor {
+  margin-top: 0.75rem;
+  border: 1px solid var(--portfolio-border);
+  border-radius: 16px;
+  background: var(--portfolio-surface-strong);
+  padding: 0.875rem;
+}
+
+.dollar-editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dollar-editor-title {
+  margin: 0;
+  color: var(--portfolio-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.dollar-editor-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.dollar-field {
+  display: block;
+  color: var(--portfolio-text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.dollar-input-wrap {
+  display: flex;
+  align-items: center;
+  margin-top: 0.375rem;
+  border: 1px solid var(--portfolio-border);
+  border-radius: 0.75rem;
+  background: var(--portfolio-surface-action);
+  overflow: hidden;
+}
+
+.dollar-input-wrap:focus-within {
+  outline: 2px solid rgb(129 140 248 / 0.65);
+  outline-offset: 2px;
+}
+
+.dollar-input-prefix {
+  padding: 0 0.25rem 0 0.75rem;
+  color: var(--portfolio-text-muted);
+  font-size: 0.9rem;
+}
+
+.dollar-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.65rem 0.75rem 0.65rem 0.25rem;
+  color: var(--portfolio-text);
+}
+
+.dollar-input:focus-visible {
+  outline: none;
+}
+
+.dollar-field-hint {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--portfolio-text-subtle);
+  font-size: 0.72rem;
+}
+
+.dollar-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dollar-editor-actions--top {
+  display: none;
+}
+
+.dollar-editor-actions--bottom {
+  margin-top: 0.75rem;
+  justify-content: flex-end;
+}
+
+.dollar-editor-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 7rem;
+  height: 2.375rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .dollar-values {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  .dollar-edit-wrap {
+    grid-column: auto;
+  }
+
+  .dollar-editor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dollar-editor-actions--top {
+    display: inline-flex;
+  }
+
+  .dollar-editor-actions--bottom {
+    display: none;
+  }
+
+  .dollar-value-number {
+    font-size: 1.6rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .dollar-edit-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dollar-editor-button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .dollar-refresh-label {
+    display: none;
+  }
+
+  .dollar-refresh-button {
+    width: 2rem;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+[data-theme="light"] .dollar-badge-actual {
+  background: rgb(5 150 105 / 0.12);
+  color: #047857;
+}
+
+[data-theme="light"] .dollar-editor {
+  background: #eef2f7;
 }

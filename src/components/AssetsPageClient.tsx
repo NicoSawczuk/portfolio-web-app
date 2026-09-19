@@ -348,8 +348,8 @@ export default function AssetsPageClient({
       <section className="page-container">
         <header className="card card-header">
           <div>
-            <p className="eyebrow">Módulo</p>
-            <h1 className="card-title card-title--page">Activos</h1>
+            <p className="eyebrow">Activos</p>
+            <h1 className="card-title card-title--page">Activos disponibles</h1>
           </div>
           <div className="header-actions">
             {initialPermissions.canRefresh ? (
@@ -501,20 +501,16 @@ export default function AssetsPageClient({
               {filteredAssets.length ? (
                 paginatedAssets.map((asset) => (
                   <div key={asset.id} className="assets-row">
-                    <div className="assets-row-top">
-                      <div className="assets-symbol-line">
-                        <p className="assets-symbol" title={asset.name}>
-                          {asset.symbol}
-                        </p>
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getAssetTypeChipClass(asset.type)}`}>
-                          {assetTypes.find((item) => item.value === asset.type)?.label}
-                        </span>
-                      </div>
-                      <div className="assets-row-side">
-                        <span className="assets-price">{formatPrice(getAssetCurrentPrice(asset), getAssetCurrency(asset))}</span>
-                      </div>
+                    <div className="assets-symbol-line">
+                      <p className="assets-symbol" title={asset.name}>
+                        {asset.symbol}
+                      </p>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getAssetTypeChipClass(asset.type)}`}>
+                        {assetTypes.find((item) => item.value === asset.type)?.label}
+                      </span>
                     </div>
                     <p className="assets-name">{asset.name}</p>
+                    <p className="assets-price">{formatPrice(getAssetCurrentPrice(asset), getAssetCurrency(asset))}</p>
                     <div className="assets-row-foot">
                       <div className="assets-quote">
                         <span

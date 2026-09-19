@@ -89,6 +89,7 @@ FINNHUB_QUOTES_REFRESH_MINUTES=15
 COINMARKETCAP_API_BASE_URL=https://pro-api.coinmarketcap.com
 COINMARKETCAP_API_KEY=YOUR_TOKEN
 BYMA_CEDEARS_URL=https://open.bymadata.com.ar
+DOLAR_API_URL=https://dolarapi.com
 ```
 
 Service location:
@@ -109,6 +110,34 @@ Current usage in the app:
 	- BYMA for `cedear` symbols (`price_ars` in ARS; invalid quotes never overwrite the stored price).
 - Quotes are refreshed only when stale according to `FINNHUB_QUOTES_REFRESH_MINUTES` (default: 15), avoiding calls on every page visit.
 - If providers are not configured or fail for a symbol, the persisted local asset price is used as fallback.
+
+## DolarAPI (Tipo de cambio)
+
+Cotización del dólar oficial para `/configuracion/tipo-cambio`.
+
+```bash
+DOLAR_API_URL=https://dolarapi.com
+```
+
+Flujo:
+
+```text
+DolarAPI
+    ↓
+GET /v1/dolares/oficial
+    ↓
+DolarQuoteService (compara con última cotización)
+    ↓
+MongoDB / dollar_quotes
+    ↓
+Frontend
+```
+
+- `src/lib/dolarapi-service.ts` (cliente HTTP, mapea `compra` → `buy`, `venta` → `sell`, `fechaActualizacion` → `datetime`)
+- `src/lib/dollar-quote-db.ts` (collection `dollar_quotes`)
+- `src/lib/dollar-quote-service.ts` (regla central: solo inserta si `buy` o `sell` cambió; consulta automática diaria lazy en la page)
+- `src/app/api/dollar-quotes/route.ts` (`GET` actual + histórico paginado, `POST` refresh/manual, `DELETE` histórico)
+- La visualización normal lee MongoDB; DolarAPI solo se llama en la consulta diaria automática o con "Actualizar ahora".
 
 ## CoinMarketCap Crypto Mapping
 

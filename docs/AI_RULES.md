@@ -71,6 +71,7 @@ For API changes, inspect the route and its consumers before changing contracts.
 ## 6. UI and application behavior
 
 - Follow existing component, styling and state-management patterns.
+- For any UI/styling/theming work, `VISUAL.md` is the source of truth (color semantics, surfaces, tokens, responsive rules); follow it instead of inventing styles.
 - Preserve existing behavior outside the requested change.
 - For UI changes, trace the relevant client → API → persistence flow when the UI depends on backend behavior.
 - Do not introduce a new pattern when an existing one already solves the problem.

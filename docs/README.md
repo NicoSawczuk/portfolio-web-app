@@ -42,6 +42,7 @@ Do not read every document by default. Start broad enough to identify the area, 
 | `DATABASE.md` | MongoDB collections and persistence model |
 | `CALCULATIONS.md` | Financial calculations and metric behavior |
 | `WORKFLOWS.md` | End-to-end application flows |
+| `VISUAL.md` | Visual system, theming and UI patterns (base since `7277e50`) |
 | `AUDIT.md` | Known findings and risks; informational, not an automatic task backlog |
 
 ## Priority

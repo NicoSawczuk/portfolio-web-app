@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import type { AssetCurrency } from "@/lib/portfolio";
-import { formatCurrency, formatPercent, formatSignedCurrency } from "@/lib/portfolio-format";
+import {
+  formatCurrency,
+  formatPercent,
+  formatSignedCurrency,
+  formatUsdEquivalent,
+} from "@/lib/portfolio-format";
 
 export interface HomeHeroTotals {
   currency: AssetCurrency;
@@ -13,7 +18,7 @@ export interface HomeHeroTotals {
   portfolioCount: number;
 }
 
-export default function HomeHeroCard({ totals }: { totals: HomeHeroTotals[] }) {
+export default function HomeHeroCard({ totals, dollarQuoteSell }: { totals: HomeHeroTotals[]; dollarQuoteSell?: number | null }) {
   const [selected, setSelected] = useState<AssetCurrency>(() => {
     if (totals.some((t) => t.currency === "USD")) return "USD";
     return totals[0]?.currency ?? "USD";
@@ -24,6 +29,8 @@ export default function HomeHeroCard({ totals }: { totals: HomeHeroTotals[] }) {
   if (!active) {
     return null;
   }
+
+  const usdEquivalent = formatUsdEquivalent(active.totalMarketValue, active.currency, dollarQuoteSell);
 
   return (
     <div className="home-hero-card">
@@ -50,6 +57,7 @@ export default function HomeHeroCard({ totals }: { totals: HomeHeroTotals[] }) {
           ) : null}
         </div>
         <p className="home-hero-value">{formatCurrency(active.totalMarketValue, active.currency)}</p>
+        {usdEquivalent ? <p className="usd-equivalent">{usdEquivalent}</p> : null}
       </div>
       <div className="home-hero-side">
         <div className="home-hero-mini">

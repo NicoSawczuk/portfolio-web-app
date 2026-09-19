@@ -73,3 +73,14 @@ export async function getUserAssetPermissions(userId: string) {
     canRefresh: set.has("assets:refresh"),
   };
 }
+
+export async function getUserDollarPermissions(userId: string) {
+  const actions = await getUserPermissionActions(userId);
+  const set = new Set(actions);
+
+  return {
+    canCreate: set.has("dollar:create"),
+    canEdit: set.has("dollar:edit"),
+    canDelete: set.has("dollar:delete"),
+  };
+}
