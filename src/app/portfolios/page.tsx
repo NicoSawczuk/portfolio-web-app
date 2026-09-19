@@ -5,6 +5,7 @@ import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { readPortfolios } from "@/lib/portfolio-db";
 import { readLatestDollarQuote } from "@/lib/dollar-quote-db";
 import PortfolioDashboardClient from "@/components/PortfolioDashboardClient";
+import { DollarQuoteProvider } from "@/lib/dollar-quote-context";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +25,11 @@ export default async function PortfoliosPage() {
   ]);
 
   return (
-    <PortfolioDashboardClient
-      initialPortfolios={portfolios}
-      initialAssets={assets}
-      dollarQuoteSell={dollarQuote ? Number(dollarQuote.sell) : null}
-    />
+    <DollarQuoteProvider initialSellQuote={dollarQuote ? Number(dollarQuote.sell) : null}>
+      <PortfolioDashboardClient
+        initialPortfolios={portfolios}
+        initialAssets={assets}
+      />
+    </DollarQuoteProvider>
   );
 }

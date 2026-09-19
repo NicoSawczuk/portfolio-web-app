@@ -276,9 +276,9 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
 
             <div className="card-item">
               {rows.length === 0 ? (
-                <p>No hay transacciones para exportar con los portfolios seleccionados.</p>
+                <p>No hay transacciones para exportar.</p>
               ) : (
-                <p>Se exportarán {rows.length} transacciones con datos del portfolio y el activo.</p>
+                <p>Se exportarán {rows.length} transacciones.</p>
               )}
             </div>
           </div>

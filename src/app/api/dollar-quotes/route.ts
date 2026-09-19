@@ -8,27 +8,6 @@ import {
 import { DOLLAR_PERMISSIONS } from "@/lib/permissions";
 import { hasUserPermission } from "@/lib/user-permissions-db";
 
-function formatQuoteDateKey(datetime: string) {
-  const date = new Date(datetime);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
-}
-
-function normalizeSearch(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
 // GET /api/dollar-quotes -> cotización actual (MongoDB) + histórico paginado.
 // Query: page (1-based), pageSize, search (fecha "dd/mm/yyyy" o ISO).
 export async function GET(request: Request) {
@@ -43,21 +22,13 @@ export async function GET(request: Request) {
   const pageSize = [10, 20, 50, 100].includes(rawPageSize) ? rawPageSize : 20;
   const search = (requestUrl.searchParams.get("search") ?? "").trim();
 
-  const [current, all] = await Promise.all([readLatestDollarQuote(), readDollarQuotesHistory()]);
+  const [current, { quotes: history, total }] = await Promise.all([
+    readLatestDollarQuote(),
+    readDollarQuotesHistory(page, pageSize, search),
+  ]);
 
-  const normalizedSearch = normalizeSearch(search);
-  const filtered = normalizedSearch
-    ? all.filter((quote) => {
-        const haystack = normalizeSearch(`${quote.datetime} ${formatQuoteDateKey(quote.datetime)}`);
-        return normalizedSearch.split(/\s+/).every((token) => haystack.includes(token));
-      })
-    : all;
-
-  const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const boundedPage = Math.min(page, totalPages);
-  const start = (boundedPage - 1) * pageSize;
-  const history = filtered.slice(start, start + pageSize);
 
   return NextResponse.json({
     current,

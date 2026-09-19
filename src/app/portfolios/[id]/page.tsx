@@ -6,6 +6,7 @@ import { readAssets } from "@/lib/asset-db";
 import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import { readPortfolioById } from "@/lib/portfolio-db";
 import { readLatestDollarQuote } from "@/lib/dollar-quote-db";
+import { DollarQuoteProvider } from "@/lib/dollar-quote-context";
 
 interface PortfolioDetailPageProps {
   params: Promise<{ id: string }>;
@@ -32,12 +33,13 @@ export default async function PortfolioDetailPage({ params }: PortfolioDetailPag
   }
 
   return (
-    <PortfolioV3MainClient
-      portfolioId={id}
-      initialPortfolio={portfolio}
-      initialAssets={assets}
-      dollarQuoteSell={dollarQuote ? Number(dollarQuote.sell) : null}
-    />
+    <DollarQuoteProvider initialSellQuote={dollarQuote ? Number(dollarQuote.sell) : null}>
+      <PortfolioV3MainClient
+        portfolioId={id}
+        initialPortfolio={portfolio}
+        initialAssets={assets}
+      />
+    </DollarQuoteProvider>
   );
 }
 

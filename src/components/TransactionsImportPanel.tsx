@@ -216,7 +216,7 @@ export default function TransactionsImportPanel({ portfolios }: TransactionsImpo
           className="button button-secondary inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium sm:text-sm"
         >
           <CopyIcon />
-          {copied ? "¡Copiado!" : "Copiar JSON de ejemplo"}
+          {copied ? "¡Copiado!" : "Copiar JSON"}
         </button>
       </div>
 
@@ -270,7 +270,7 @@ export default function TransactionsImportPanel({ portfolios }: TransactionsImpo
             >
               {portfolios.map((portfolio) => (
                 <option key={portfolio.id} value={portfolio.id}>
-                  {portfolio.name} ({portfolio.currency}) — {portfolio.id}
+                  {portfolio.name} ({portfolio.currency})
                 </option>
               ))}
             </select>

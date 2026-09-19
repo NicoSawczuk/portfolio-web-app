@@ -8,6 +8,7 @@ import {
   formatSignedCurrency,
   formatUsdEquivalent,
 } from "@/lib/portfolio-format";
+import { useDollarQuote } from "@/lib/dollar-quote-context";
 
 export interface HomeHeroTotals {
   currency: AssetCurrency;
@@ -18,7 +19,8 @@ export interface HomeHeroTotals {
   portfolioCount: number;
 }
 
-export default function HomeHeroCard({ totals, dollarQuoteSell }: { totals: HomeHeroTotals[]; dollarQuoteSell?: number | null }) {
+export default function HomeHeroCard({ totals }: { totals: HomeHeroTotals[] }) {
+  const { sellQuote: dollarQuoteSell } = useDollarQuote();
   const [selected, setSelected] = useState<AssetCurrency>(() => {
     if (totals.some((t) => t.currency === "USD")) return "USD";
     return totals[0]?.currency ?? "USD";
