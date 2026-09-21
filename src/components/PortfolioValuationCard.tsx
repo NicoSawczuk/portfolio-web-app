@@ -82,7 +82,7 @@ export default function PortfolioValuationCard({
           {showArsBreakdown ? (
             <p className="mt-1 text-xs font-medium text-slate-400">
               {showAmounts
-                ? `Incluye ${formatCurrency(marketValueByCurrency?.ARS ?? 0, "ARS")} en CEDEARs`
+                ? `Incluye ${formatCurrency(marketValueByCurrency?.ARS ?? 0, "ARS")} en activos ARS`
                 : "••••••"}
             </p>
           ) : null}

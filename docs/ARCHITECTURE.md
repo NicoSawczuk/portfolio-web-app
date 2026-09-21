@@ -97,6 +97,7 @@ API routes:
 | `/api/auth/me` | GET | `src/app/api/auth/me/route.ts` |
 | `/api/assets` | GET, POST, PUT, DELETE | `src/app/api/assets/route.ts` |
 | `/api/byma/cedears` | GET, POST | `src/app/api/byma/cedears/route.ts` |
+| `/api/data912/arg-stocks` | GET, POST | `src/app/api/data912/arg-stocks/route.ts` |
 | `/api/dollar-quotes` | GET, POST, DELETE | `src/app/api/dollar-quotes/route.ts` |
 | `/api/portfolios` | GET, POST, PUT, DELETE | `src/app/api/portfolios/route.ts` |
 | `/api/portfolios/[id]` | GET, POST, PUT, DELETE | `src/app/api/portfolios/[id]/route.ts` |
@@ -171,8 +172,17 @@ BYMA (CEDEARs):
 - Base URL from `BYMA_CEDEARS_URL` (default `https://open.bymadata.com.ar`), path `/vanoms-be-core/rest/api/bymadata/free/cedears`.
 - `POST` with body `{ excludeZeroPxAndQty: true, T1: true, T0: false }`, no auth.
 - Returns the full CEDEAR list (`symbol`, `bidPrice`, ...); the service filters by requested symbols and keeps only finite `bidPrice > 0`. The full dump is cached in memory with TTL (`BYMA_CEDEARS_TTL_MINUTES`, default 15) and concurrent callers share the in-flight request.
-- Eligible: `cedear` assets only. Refresh writes `price_ars` (ARS) and never touches `price`; invalid/out-of-market quotes are discarded without overwriting the stored price.
+- Eligible: `cedear` assets only. Refresh writes `price` (ARS, in the asset currency) and never touches USD prices; invalid/out-of-market quotes are discarded without overwriting the stored price.
 - Direct access: `GET /api/byma/cedears?symbols=AAPL,MELI` or `POST /api/byma/cedears` with `{ "symbols": [...] }`.
+
+Data912 (acciones argentinas en ARS):
+
+- File: `src/lib/data912-service.ts`.
+- Base URL from `DATA912_API_URL` (default `https://data912.com`), path `/live/arg_stocks`.
+- `GET`, no auth.
+- Returns the full ARS stock list (`symbol`, `px_bid`, ...); the service filters by requested symbols and only keeps finite `px_bid > 0`. The full dump is cached in memory with TTL (`DATA912_TTL_MINUTES`, default 15) and concurrent callers share the in-flight request.
+- Eligible: `stock` assets whose currency is `ARS` (never sent to Finnhub). Refresh writes `price` (ARS); invalid/out-of-market quotes are discarded without overwriting the stored price.
+- Direct access: `GET /api/data912/arg-stocks?symbols=GGAL,YPFD` or `POST /api/data912/arg-stocks` with `{ "symbols": [...] }`.
 
 DolarAPI (dólar oficial):
 
@@ -190,7 +200,7 @@ Current implementation:
 
 - Next pages generally force dynamic rendering.
 - Provider fetch calls use `cache: "no-store"`.
-- Quote freshness is implemented through persisted fields `quoteUpdatedAt` and `quoteCheckedAt`, with `FINNHUB_QUOTES_REFRESH_MINUTES` defaulting to 15. Freshness is evaluated against the effective price (`price_ars` for `cedear`, `price` otherwise).
+- Quote freshness is implemented through persisted fields `quoteUpdatedAt` and `quoteCheckedAt`, with `FINNHUB_QUOTES_REFRESH_MINUTES` defaulting to 15. Freshness is evaluated against the effective price (`getAssetCurrentPrice()`, in the asset currency). ARS assets are excluded from Finnhub refresh so a USD quote never overwrites an ARS price; ARS stocks are priced via Data912.
 - `/api/assets` refreshes live quotes only when `forceRefresh=1`; otherwise it returns stored assets.
 
 UNKNOWN / REQUIRES CONFIRMATION:

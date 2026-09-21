@@ -158,8 +158,9 @@ Document structure:
 | `name` | string | Required by API. |
 | `type` | string | `stock`, `etf`, `crypto`, `bond`, `cash`, `other`, `cedear`. |
 | `id_partner` | number/undefined | Used for CoinMarketCap crypto id. |
-| `price` | number | Current/local price in USD. Forced to `0` for `cedear` assets. |
-| `price_ars` | number/undefined | Current/local price in ARS, only for `cedear` assets. |
+| `currency` | string/undefined | Quote currency `USD` or `ARS`. Missing in legacy docs resolves as `ARS` for `cedear`, `USD` otherwise. |
+| `price` | number | Current/local price in the asset currency (`currency`, default `USD`). All assets (including ARS assets) store their price here. |
+| `price_ars` | number/undefined | Legacy: ARS price only for old `cedear` documents without `currency`. Kept for backward compatibility; new writes clear it. |
 | `priceSource` | string/undefined | Present in hydrated API responses but not persisted by `refreshAssetsQuotesWithCache()`. |
 | `quoteCheckedAt` | string/undefined | Persisted on quote refresh. |
 | `quoteUpdatedAt` | string/undefined | Persisted on quote refresh when provider returns quote. |
@@ -188,7 +189,7 @@ Delete operations:
 Important queries:
 
 - All assets are loaded for dashboards and asset selectors.
-- Minimal projection is used in portfolio pages to avoid transaction payload. It includes `price_ars` (`{ _id: 0, id: 1, symbol: 1, name: 1, type: 1, price: 1, price_ars: 1 }`).
+- Minimal projection is used in portfolio pages to avoid transaction payload. It includes `currency` and `price_ars` (`{ _id: 0, id: 1, symbol: 1, name: 1, type: 1, currency: 1, price: 1, price_ars: 1 }`).
 
 Consumers:
 

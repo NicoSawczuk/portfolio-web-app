@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Asset } from "@/lib/portfolio";
+import type { Asset, AssetCurrency } from "@/lib/portfolio";
 import { getAssetCurrency, getAssetCurrentPrice, isCedearAsset } from "@/lib/portfolio";
-import { getAssetTypeChipClass } from "@/lib/portfolio-format";
+import { getAssetTypeChipClass, getCurrencyChipClass } from "@/lib/portfolio-format";
 
 function emptyAssetForm() {
   return {
     symbol: "",
     name: "",
     type: "stock" as Asset["type"],
+    currency: "USD" as AssetCurrency,
     id_partner: "",
     price: "",
   };
@@ -68,6 +69,11 @@ const assetTypes: Array<{ value: Asset["type"]; label: string }> = [
   { value: "other", label: "Otro" },
 ];
 
+const currencyOptions: Array<{ value: AssetCurrency; label: string }> = [
+  { value: "USD", label: "USD" },
+  { value: "ARS", label: "ARS" },
+];
+
 interface AssetsPageClientProps {
   initialAssets: Asset[];
   initialPermissions?: AssetPermissions;
@@ -92,6 +98,9 @@ export default function AssetsPageClient({
   const [selectedTypes, setSelectedTypes] = useState<Array<Asset["type"]>>([]);
   const [typeFilterOpen, setTypeFilterOpen] = useState(false);
   const typeFilterRef = useRef<HTMLDivElement>(null);
+  const [selectedCurrencies, setSelectedCurrencies] = useState<Array<AssetCurrency>>([]);
+  const [currencyFilterOpen, setCurrencyFilterOpen] = useState(false);
+  const currencyFilterRef = useRef<HTMLDivElement>(null);
   const [assetsPerPage, setAssetsPerPage] = useState<10 | 20 | 50 | 100>(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -134,20 +143,38 @@ export default function AssetsPageClient({
     setCurrentPage(1);
   };
 
+  const toggleCurrencyFilter = (currency: AssetCurrency) => {
+    setSelectedCurrencies((current) =>
+      current.includes(currency) ? current.filter((item) => item !== currency) : [...current, currency]
+    );
+    setCurrentPage(1);
+  };
+
+  const clearCurrencyFilter = () => {
+    setSelectedCurrencies([]);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
-    if (!typeFilterOpen) {
+    const isAnyOpen = typeFilterOpen || currencyFilterOpen;
+    if (!isAnyOpen) {
       return;
     }
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (typeFilterRef.current && !typeFilterRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (typeFilterOpen && typeFilterRef.current && !typeFilterRef.current.contains(target)) {
         setTypeFilterOpen(false);
+      }
+      if (currencyFilterOpen && currencyFilterRef.current && !currencyFilterRef.current.contains(target)) {
+        setCurrencyFilterOpen(false);
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setTypeFilterOpen(false);
+        setCurrencyFilterOpen(false);
       }
     };
 
@@ -158,7 +185,7 @@ export default function AssetsPageClient({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [typeFilterOpen]);
+  }, [typeFilterOpen, currencyFilterOpen]);
 
   const openAssetEditor = (asset?: Asset) => {
     if (asset && !initialPermissions.canEdit) {
@@ -175,8 +202,9 @@ export default function AssetsPageClient({
         symbol: asset.symbol,
         name: asset.name,
         type: asset.type,
+        currency: asset.currency ?? (isCedearAsset(asset) ? "ARS" : "USD"),
         id_partner: String(asset.id_partner ?? ""),
-        price: String(isCedearAsset(asset) ? (asset.price_ars ?? 0) : asset.price),
+        price: String(getAssetCurrentPrice(asset)),
       });
       setIsModalOpen(true);
       return;
@@ -213,38 +241,21 @@ export default function AssetsPageClient({
     setError(null);
 
     try {
-      const isCedear = assetForm.type === "cedear";
       const response = await fetch("/api/assets", {
         method: editingAssetId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          editingAssetId
-            ? {
-                id: editingAssetId,
-                symbol: assetForm.symbol,
-                name: assetForm.name,
-                type: assetForm.type,
-                id_partner:
-                  assetForm.type === "crypto" && assetForm.id_partner.trim()
-                    ? Number(assetForm.id_partner)
-                    : undefined,
-                ...(isCedear
-                  ? { price_ars: Number(assetForm.price || 0) }
-                  : { price: Number(assetForm.price || 0) }),
-              }
-            : {
-                symbol: assetForm.symbol,
-                name: assetForm.name,
-                type: assetForm.type,
-                id_partner:
-                  assetForm.type === "crypto" && assetForm.id_partner.trim()
-                    ? Number(assetForm.id_partner)
-                    : undefined,
-                ...(isCedear
-                  ? { price_ars: Number(assetForm.price || 0) }
-                  : { price: Number(assetForm.price || 0) }),
-              }
-        ),
+        body: JSON.stringify({
+          ...(editingAssetId ? { id: editingAssetId } : {}),
+          symbol: assetForm.symbol,
+          name: assetForm.name,
+          type: assetForm.type,
+          currency: assetForm.currency,
+          id_partner:
+            assetForm.type === "crypto" && assetForm.id_partner.trim()
+              ? Number(assetForm.id_partner)
+              : undefined,
+          price: Number(assetForm.price || 0),
+        }),
       });
 
       if (!response.ok) {
@@ -301,6 +312,15 @@ export default function AssetsPageClient({
     return counts;
   }, [assets]);
 
+  const assetCountByCurrency = useMemo(() => {
+    const counts = new Map<AssetCurrency, number>();
+    for (const asset of assets) {
+      const currency = getAssetCurrency(asset);
+      counts.set(currency, (counts.get(currency) ?? 0) + 1);
+    }
+    return counts;
+  }, [assets]);
+
   const typeFilterLabel =
     selectedTypes.length === 0
       ? "Todos los tipos"
@@ -308,10 +328,22 @@ export default function AssetsPageClient({
         ? (assetTypes.find((item) => item.value === selectedTypes[0])?.label ?? "1 tipo")
         : `${selectedTypes.length} tipos`;
 
-  const filteredAssets = useMemo(() => {    const query = searchQuery.trim().toLowerCase();
+  const currencyFilterLabel =
+    selectedCurrencies.length === 0
+      ? "Todas las monedas"
+      : selectedCurrencies.length === 1
+        ? selectedCurrencies[0]
+        : `${selectedCurrencies.length} monedas`;
+
+  const filteredAssets = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
 
     const matchedAssets = assets.filter((asset) => {
       if (selectedTypes.length > 0 && !selectedTypes.includes(asset.type)) {
+        return false;
+      }
+
+      if (selectedCurrencies.length > 0 && !selectedCurrencies.includes(getAssetCurrency(asset))) {
         return false;
       }
 
@@ -322,7 +354,8 @@ export default function AssetsPageClient({
       return (
         asset.symbol.toLowerCase().includes(query) ||
         asset.name.toLowerCase().includes(query) ||
-        asset.type.toLowerCase().includes(query)
+        asset.type.toLowerCase().includes(query) ||
+        getAssetCurrency(asset).toLowerCase().includes(query)
       );
     });
 
@@ -334,7 +367,7 @@ export default function AssetsPageClient({
 
       return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
     });
-  }, [assets, searchQuery, selectedTypes]);
+  }, [assets, searchQuery, selectedCurrencies, selectedTypes]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / assetsPerPage));
   const boundedCurrentPage = Math.min(currentPage, totalPages);
@@ -410,55 +443,11 @@ export default function AssetsPageClient({
               <h2 className="card-title">Activos creados</h2>
             </div>
             <div className="assets-toolbar">
-              <div className="assets-search">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="assets-search-icon"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.3-4.3" />
-                </svg>
-                <input
-                  value={searchQuery}
-                  onChange={(event) => {
-                    setSearchQuery(event.target.value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Buscar"
-                  className="control assets-search-control"
-                />
-              </div>
-              <select
-                value={assetsPerPage}
-                onChange={(event) => {
-                  setAssetsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100);
-                  setCurrentPage(1);
-                }}
-                className="control assets-page-size"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <div className="assets-type-dropdown" ref={typeFilterRef}>
-                <button
-                  type="button"
-                  onClick={() => setTypeFilterOpen((value) => !value)}
-                  aria-expanded={typeFilterOpen}
-                  aria-haspopup="listbox"
-                  className="control assets-type-dropdown-button"
-                >
-                  <span>{typeFilterLabel}</span>
+              <div className="assets-toolbar-row">
+                <div className="assets-search">
                   <svg
                     viewBox="0 0 24 24"
-                    className={`assets-type-dropdown-chevron${typeFilterOpen ? " assets-type-dropdown-chevron--open" : ""}`}
+                    className="assets-search-icon"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -466,32 +455,126 @@ export default function AssetsPageClient({
                     strokeLinejoin="round"
                     aria-hidden="true"
                   >
-                    <path d="m6 9 6 6 6-6" />
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
                   </svg>
-                </button>
-                {typeFilterOpen ? (
-                  <div className="assets-type-dropdown-panel" role="listbox" aria-label="Filtrar por tipo" aria-multiselectable="true">
-                    {assetTypes.map((item) => (
-                      <label key={item.value} className="assets-type-dropdown-option">
-                        <input
-                          type="checkbox"
-                          checked={selectedTypes.includes(item.value)}
-                          onChange={() => toggleTypeFilter(item.value)}
-                          className="modal-checkbox"
-                        />
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getAssetTypeChipClass(item.value)}`}>
-                          {item.label}
-                        </span>
-                        <span className="assets-type-dropdown-count">{assetCountByType.get(item.value) ?? 0}</span>
-                      </label>
-                    ))}
-                    {selectedTypes.length > 0 ? (
-                      <button type="button" onClick={clearTypeFilter} className="assets-type-dropdown-clear">
-                        Limpiar
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Buscar"
+                    className="control assets-search-control"
+                  />
+                </div>
+                <select
+                  value={assetsPerPage}
+                  onChange={(event) => {
+                    setAssetsPerPage(Number(event.target.value) as 10 | 20 | 50 | 100);
+                    setCurrentPage(1);
+                  }}
+                  className="control assets-page-size"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+              <div className="assets-toolbar-row">
+                <div className="assets-type-dropdown" ref={typeFilterRef}>
+                  <button
+                    type="button"
+                    onClick={() => setTypeFilterOpen((value) => !value)}
+                    aria-expanded={typeFilterOpen}
+                    aria-haspopup="listbox"
+                    className="control assets-type-dropdown-button"
+                  >
+                    <span>{typeFilterLabel}</span>
+                    <svg
+                      viewBox="0 0 24 24"
+                      className={`assets-type-dropdown-chevron${typeFilterOpen ? " assets-type-dropdown-chevron--open" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  {typeFilterOpen ? (
+                    <div className="assets-type-dropdown-panel" role="listbox" aria-label="Filtrar por tipo" aria-multiselectable="true">
+                      {assetTypes.map((item) => (
+                        <label key={item.value} className="assets-type-dropdown-option">
+                          <input
+                            type="checkbox"
+                            checked={selectedTypes.includes(item.value)}
+                            onChange={() => toggleTypeFilter(item.value)}
+                            className="modal-checkbox"
+                          />
+                          <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getAssetTypeChipClass(item.value)}`}>
+                            {item.label}
+                          </span>
+                          <span className="assets-type-dropdown-count">{assetCountByType.get(item.value) ?? 0}</span>
+                        </label>
+                      ))}
+                      {selectedTypes.length > 0 ? (
+                        <button type="button" onClick={clearTypeFilter} className="assets-type-dropdown-clear">
+                          Limpiar
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="assets-type-dropdown" ref={currencyFilterRef}>
+                  <button
+                    type="button"
+                    onClick={() => setCurrencyFilterOpen((value) => !value)}
+                    aria-expanded={currencyFilterOpen}
+                    aria-haspopup="listbox"
+                    className="control assets-type-dropdown-button"
+                  >
+                    <span>{currencyFilterLabel}</span>
+                    <svg
+                      viewBox="0 0 24 24"
+                      className={`assets-type-dropdown-chevron${currencyFilterOpen ? " assets-type-dropdown-chevron--open" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  {currencyFilterOpen ? (
+                    <div className="assets-type-dropdown-panel" role="listbox" aria-label="Filtrar por moneda" aria-multiselectable="true">
+                      {currencyOptions.map((item) => (
+                        <label key={item.value} className="assets-type-dropdown-option">
+                          <input
+                            type="checkbox"
+                            checked={selectedCurrencies.includes(item.value)}
+                            onChange={() => toggleCurrencyFilter(item.value)}
+                            className="modal-checkbox"
+                          />
+                          <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getCurrencyChipClass(item.value)}`}>
+                            {item.label}
+                          </span>
+                          <span className="assets-type-dropdown-count">{assetCountByCurrency.get(item.value) ?? 0}</span>
+                        </label>
+                      ))}
+                      {selectedCurrencies.length > 0 ? (
+                        <button type="button" onClick={clearCurrencyFilter} className="assets-type-dropdown-clear">
+                          Limpiar
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
@@ -507,6 +590,9 @@ export default function AssetsPageClient({
                       </p>
                       <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getAssetTypeChipClass(asset.type)}`}>
                         {assetTypes.find((item) => item.value === asset.type)?.label}
+                      </span>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getCurrencyChipClass(getAssetCurrency(asset))}`}>
+                        {getAssetCurrency(asset)}
                       </span>
                     </div>
                     <p className="assets-name">{asset.name}</p>
@@ -660,12 +746,14 @@ export default function AssetsPageClient({
                   Tipo
                   <select
                     value={assetForm.type}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const nextType = event.target.value as Asset["type"];
                       setAssetForm((current) => ({
                         ...current,
-                        type: event.target.value as Asset["type"],
-                      }))
-                    }
+                        type: nextType,
+                        currency: nextType === "cedear" ? "ARS" : current.currency,
+                      }));
+                    }}
                     className="control modal-field-input"
                   >
                     {assetTypes.map((item) => (
@@ -692,7 +780,24 @@ export default function AssetsPageClient({
 
               <div className="modal-form-grid">
                 <label className="modal-field">
-                  Precio actual ({assetForm.type === "cedear" ? "ARS" : "USD"})
+                  Moneda
+                  <select
+                    value={assetForm.currency}
+                    onChange={(event) =>
+                      setAssetForm((current) => ({
+                        ...current,
+                        currency: event.target.value as AssetCurrency,
+                      }))
+                    }
+                    disabled={assetForm.type === "cedear"}
+                    className="control modal-field-input"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="ARS">ARS</option>
+                  </select>
+                </label>
+                <label className="modal-field">
+                  Precio actual ({assetForm.currency})
                   <input
                     type="number"
                     value={assetForm.price}

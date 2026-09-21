@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { readAssets } from "@/lib/asset-db";
 import { readPortfolios } from "@/lib/portfolio-db";
 import { calculatePortfolioPerformance } from "@/lib/portfolio-summary";
-import { formatUsdEquivalent } from "@/lib/portfolio-format";
+import { formatUsdEquivalent, getUsdEquivalent } from "@/lib/portfolio-format";
 import { readLatestDollarQuote } from "@/lib/dollar-quote-db";
 import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth";
 import HomeHeroCard from "@/components/HomeHeroCard";
@@ -202,11 +202,19 @@ async function getHomeViewData(userId: string): Promise<HomeViewData> {
     totalMarketByCurrency[totals.currency] = totals.totalMarketValue;
   }
 
+  const dollarQuoteSell = dollarQuote ? Number(dollarQuote.sell) : null;
+
+  const toUsdValue = (value: number, currency: AssetCurrency) => {
+    // Los portfolios ARS se comparan por su equivalente USD (cotización de venta);
+    // los USD usan su valor directo.
+    return getUsdEquivalent(value, currency, dollarQuoteSell) ?? value;
+  };
+
   const portfolioDistribution = [...portfolioPerformances].sort(
-    (a, b) => b.performance.totalMarketValue - a.performance.totalMarketValue
+    (a, b) => toUsdValue(b.performance.totalMarketValue, b.performance.currency) - toUsdValue(a.performance.totalMarketValue, a.performance.currency)
   );
   const portfolioGainsRanking = [...portfolioPerformances].sort(
-    (a, b) => b.performance.totalPnl - a.performance.totalPnl
+    (a, b) => toUsdValue(b.performance.totalPnl, b.performance.currency) - toUsdValue(a.performance.totalPnl, a.performance.currency)
   );
 
   return {
@@ -215,7 +223,7 @@ async function getHomeViewData(userId: string): Promise<HomeViewData> {
     totalMarketByCurrency,
     portfolioDistribution,
     portfolioGainsRanking,
-    dollarQuoteSell: dollarQuote ? Number(dollarQuote.sell) : null,
+    dollarQuoteSell,
   };
 }
 

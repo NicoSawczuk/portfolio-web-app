@@ -1092,6 +1092,13 @@ select.control {
   gap: 0.5rem;
 }
 
+.assets-toolbar-row {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .assets-search {
   position: relative;
   flex: 1;
@@ -1293,6 +1300,13 @@ select.control {
 .assets-badge--local {
   background: rgb(245 158 11 / 0.1);
   color: rgb(252 211 77);
+}
+
+/* Chip de moneda: mismo estilo (colores) que .home-currency-badge. */
+.assets-currency-chip {
+  border-color: var(--portfolio-border);
+  background: var(--portfolio-surface-strong);
+  color: #cbd5e1;
 }
 
 .assets-quote-time {
@@ -1958,6 +1972,11 @@ body:has(.modal-backdrop) {
     justify-content: flex-end;
   }
 
+  .assets-toolbar-row {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
   .assets-search {
     width: 13.75rem;
     flex: 0 0 auto;
@@ -2301,6 +2320,10 @@ body:has(.modal-backdrop) {
 [data-theme="light"] .assets-badge--local {
   background: rgb(180 83 9 / 0.12);
   color: #b45309;
+}
+
+[data-theme="light"] .assets-currency-chip {
+  color: #334155;
 }
 
 [data-theme="light"] .assets-type-dropdown-panel {

@@ -173,7 +173,7 @@ export function calculatePortfolioPerformance(
     .map((item) => {
       const assetMeta = assetById.get(item.assetId);
       const currentPrice = assetMeta ? getAssetCurrentPrice(assetMeta) : 0;
-      const currency = getAssetCurrency(assetMeta?.type ?? item.type);
+      const currency = assetMeta ? getAssetCurrency(assetMeta) : getAssetCurrency(item.type);
       const marketValue = item.quantity * currentPrice;
       const costBasis = item.quantity * item.avgBuyPrice;
       const pnl = marketValue - costBasis;

@@ -98,8 +98,8 @@ AssetsPageClient refresh button (rendered only with canRefresh)
   -> API verifies session, then requires users_permissions { userId, action: "assets:refresh" } (403 otherwise)
   -> readAssets()
   -> refreshAssetsQuotesWithCache(assets, { forceRefresh: true })
-  -> Finnhub, CoinMarketCap and BYMA requests run with Promise.allSettled
-  -> Finnhub covers stock/etf (price, USD); CoinMarketCap covers crypto (price, USD); BYMA covers cedear (price_ars, ARS)
+  -> Finnhub, CoinMarketCap, BYMA and Data912 requests run with Promise.allSettled
+  -> Finnhub covers stock/etf (price, USD); CoinMarketCap covers crypto (price, USD); BYMA covers cedear (price, ARS); Data912 covers ARS stocks (price, ARS). ARS-quoted assets are never sent to Finnhub
   -> writeAssets(persistedAssets) if price/price_ars/timestamps changed
   -> return hydratedAssets
   -> client replaces assets state
@@ -111,12 +111,13 @@ Files:
 - `src/lib/finnhub-service.ts`
 - `src/lib/coinmarketcap-service.ts`
 - `src/lib/byma-service.ts`
+- `src/lib/data912-service.ts`
 - `src/lib/asset-db.ts`
 
 Fallback behavior:
 
 - Failed/unconfigured provider results in local persisted price.
-- BYMA symbols with invalid/missing `bidPrice` (e.g. outside market hours) are skipped: `price_ars` and `quoteUpdatedAt` keep their last valid values.
+- BYMA symbols with invalid/missing `bidPrice` (e.g. outside market hours) are skipped: price (in ARS) and `quoteUpdatedAt` keep their last valid values.
 
 ## Transaction Creation From UI
 
@@ -262,9 +263,9 @@ Important difference from UI API:
   -> readPortfolios(session.userId) + readAssets({ minimal: true })
   -> TransactionsExportPanel (client-side CSV/JSON download)
   -> rows carry portfolio_currency, transaction_currency
-     (buy/sell: asset currency, otherwise portfolio currency),
+     (buy/sell: asset currency via metadata when available, otherwise portfolio currency),
      asset_currency, asset_price_currency and asset_price_ars
-  -> asset_price uses the effective price (price_ars for cedear)
+  -> asset_price uses the effective price (asset currency; price_ars fallback for legacy cedear)
 ```
 
 ## Transactions Import

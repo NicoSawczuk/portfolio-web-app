@@ -13,8 +13,8 @@ This is a high-risk reference. Before modifying financial logic, inspect the imp
 
 ## Shared Assumptions In Current Code
 
-- Currency display is `USD` by default and `ARS` for `cedear` assets (`getAssetCurrency()` in `src/lib/portfolio.ts`).
-- Asset current price is the effective price (`getAssetCurrentPrice()`): `price_ars` for `cedear`, `price` otherwise. Transaction prices are expected in the asset currency.
+- Currency display is `USD` by default and `ARS` for ARS assets: explicit `currency` field wins, falling back to `cedear` → `ARS`, otherwise `USD` (`getAssetCurrency()` in `src/lib/portfolio.ts`).
+- Asset current price is the effective price (`getAssetCurrentPrice()`): `price` in the asset currency, falling back to `price_ars` for legacy `cedear` documents. Transaction prices are expected in the asset currency.
 - Aggregate totals (`totalMarketValue`, `totalOpenMarketValue`) are nominal sums across currencies; `marketValueByCurrency: { USD, ARS }` exposes the per-currency breakdown. FX conversion is not modeled.
 - Numeric math uses JavaScript `number`, not Decimal.
 - Transaction arrays are sorted by string `date` using `localeCompare`.
@@ -76,7 +76,7 @@ Formula:
 
 ```text
 currentPrice = getAssetCurrentPrice(assetById.get(assetId)) ?? 0
-  (price_ars for cedear, price otherwise)
+  (price in the asset currency; price_ars fallback for legacy cedear)
 marketValue = quantity * currentPrice
 costBasis = quantity * avgBuyPrice
 pnl = marketValue - costBasis
@@ -181,7 +181,7 @@ If `managesCash=true`, `holdingsList` includes synthetic cash, so total market v
 
 Note:
 
-- With CEDEAR holdings, `totalMarketValue` mixes USD and ARS nominally. Use `marketValueByCurrency` to tell them apart; the valuation card shows an "Incluye ARS … en CEDEARs" line when the ARS portion is non-zero.
+- With ARS holdings, `totalMarketValue` mixes USD and ARS nominally. Use `marketValueByCurrency` to tell them apart; the valuation card shows an "Incluye … en activos ARS" line when the ARS portion is non-zero.
 
 Consumers:
 
@@ -299,7 +299,7 @@ Formula:
 
 ```text
 marketValue = remaining quantity * current effective asset price
-  (price_ars for cedear, price otherwise)
+  (price in the asset currency; price_ars fallback for legacy cedear)
 investedValue = remaining quantity * avgBuyPrice
 pnl = marketValue - investedValue
 pnlPct = investedValue > 1e-8 ? pnl / investedValue : 0
@@ -377,7 +377,7 @@ asset transaction total = transaction.price * transaction.quantity
 
 Currency:
 
-- Displayed in the transaction asset currency (`ARS` for `cedear`, `USD` otherwise).
+- Displayed in the transaction asset currency (explicit `currency` when available, fallback `ARS` for `cedear`, `USD` otherwise).
 
 Consumers:
 

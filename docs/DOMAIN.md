@@ -81,7 +81,7 @@ Business rules:
 - Name is required for create/update.
 - Normal API reads/writes are owner-scoped.
 - Deleting a portfolio deletes the whole MongoDB document.
-- Currency invariant: `buy`/`sell` transactions are only accepted when the asset currency (`getAssetCurrency()`: `ARS` for `cedear`, `USD` otherwise) matches the portfolio currency. Enforced in `POST`/`PUT /api/portfolios/[id]` and in the integration ingestion endpoint (`400` on mismatch). Cash transactions carry no asset and are always accepted.
+- Currency invariant: `buy`/`sell` transactions are only accepted when the asset currency (`getAssetCurrency()`: explicit `currency` field, falling back to `ARS` for `cedear`, `USD` otherwise) matches the portfolio currency. Enforced in `POST`/`PUT /api/portfolios/[id]` and in the integration ingestion endpoint (`400` on mismatch). Cash transactions carry no asset and are always accepted.
 
 ### Asset
 
@@ -97,9 +97,11 @@ Representation:
 
 Important fields:
 
-- `id`, `symbol`, `name`, `type`, `id_partner`, `price`, `price_ars`.
+- `id`, `symbol`, `name`, `type`, `currency`, `id_partner`, `price`, `price_ars`.
 - `type` is one of `stock`, `etf`, `crypto`, `bond`, `cash`, `other`, `cedear`.
-- `price` is the current/local price in USD for non-CEDEAR assets. `price_ars` is the current/local price in ARS and is only meaningful for `cedear` assets (kept at `0`/unset otherwise).
+- `currency` is `USD` or `ARS` and states the quote currency (defaults to `USD`; legacy `cedear` documents without it normalize to `ARS` on read).
+- `price` is the current/local price in the asset currency (`currency`, default `USD`). All assets (including ARS stocks and CEDEARs) store their price here.
+- `price_ars` is a legacy field: only old `cedear` documents (without `currency`) store their ARS price there. Kept for backward compatibility; new writes clear it.
 - `priceSource`, `quoteCheckedAt`, `quoteUpdatedAt`.
 - No `transactions` field: the only transaction ledger is `Portfolio.transactions`. Legacy documents may still contain a per-asset `transactions` array; `normalizeAsset()` and `normalizePortfolio()` strip it on read.
 
@@ -114,8 +116,8 @@ Business rules:
 - Global asset symbol and name are required.
 - Symbol is uppercased.
 - `id_partner` must be a positive integer if provided.
-- `price`/`price_ars` must be numbers `>= 0` on API create/update. For `cedear` assets the API stores `price_ars` and forces `price` to `0`; for other types `price_ars` is cleared.
-- Currency helpers live in `src/lib/portfolio.ts`: `isCedearAsset()`, `getAssetCurrency()` (`ARS` for `cedear`, `USD` otherwise), `getAssetCurrentPrice()` (`price_ars` for `cedear`, `price` otherwise).
+- `price`/`price_ars` must be numbers `>= 0` on API create/update. The API stores `price` for every asset, clears `price_ars`, and accepts `currency` (defaulting to `ARS` for `cedear`, `USD` otherwise).
+- Currency helpers live in `src/lib/portfolio.ts`: `isCedearAsset()`, `normalizeAssetCurrency()`, `getAssetCurrency()` (explicit `currency` wins; fallback `ARS` for `cedear`, `USD` otherwise), `getAssetCurrentPrice()` (`price` in the asset currency, falling back to `price_ars` for legacy `cedear` documents).
 - No uniqueness constraint on `symbol`; only an index exists.
 
 ### Transaction
@@ -200,7 +202,7 @@ Business rules:
 - Sell decreases quantity and total cost using current average buy price.
 - Open positions require positive remaining quantity.
 - Closed positions require near-zero quantity plus bought and sold quantity.
-- Valuation uses the effective asset price (`getAssetCurrentPrice()`): `price_ars` for `cedear`, `price` otherwise. Transaction prices are expected in the asset currency (ARS for CEDEARs).
+- Valuation uses the effective asset price (`getAssetCurrentPrice()`): `price` in the asset currency, falling back to `price_ars` for legacy `cedear` documents. Transaction prices are expected in the asset currency (ARS for ARS assets).
 - Summaries carry `currency` (`USD`/`ARS`) per holding/position plus a `marketValueByCurrency` breakdown. Aggregate totals (`totalMarketValue`, `totalOpenMarketValue`) remain nominal sums across currencies (no FX conversion).
 
 ### Price
@@ -211,7 +213,7 @@ Purpose:
 
 Representation:
 
-- Stored on global `Asset.price` (USD assets) or `Asset.price_ars` (ARS, `cedear` assets only).
+- Stored on global `Asset.price` in the asset currency (`currency`, default `USD`). Legacy `cedear` documents keep their ARS price in `price_ars`.
 - Quote metadata: `quoteCheckedAt`, `quoteUpdatedAt`.
 
 Providers:
@@ -219,12 +221,14 @@ Providers:
 - Finnhub for stocks/ETFs.
 - CoinMarketCap for eligible crypto assets.
 - BYMA (`POST /vanoms-be-core/rest/api/bymadata/free/cedears` on `BYMA_CEDEARS_URL`, body `{ excludeZeroPxAndQty: true, T1: true, T0: false }`) for `cedear` assets. The response is the full CEDEAR list; `src/lib/byma-service.ts` filters by the requested symbols and only keeps entries with valid `symbol` + `bidPrice > 0`.
+- Data912 (`GET /live/arg_stocks` on `DATA912_API_URL`, default `https://data912.com`) for `stock` assets quoted in ARS. The response is the full ARS stock list; `src/lib/data912-service.ts` filters by the requested symbols and only keeps entries with valid `symbol` + `px_bid > 0`.
 
 Business rules:
 
 - Provider refresh persists changed price/timestamps only via `/api/assets?forceRefresh=1`.
 - If provider unavailable/fails/no fresh quote, existing local price remains in use.
-- CEDEAR guard: outside market hours BYMA may return `bidPrice` `0`/missing. Those entries are discarded and the stored `price_ars`/`quoteUpdatedAt` are never overwritten with invalid values.
+- CEDEAR guard: outside market hours BYMA may return `bidPrice` `0`/missing. Those entries are discarded and the stored price/`quoteUpdatedAt` are never overwritten with invalid values.
+- ARS stock guard: outside market hours Data912 may return `px_bid` `0`/missing. Those entries are discarded and the stored price/`quoteUpdatedAt` are never overwritten with invalid values.
 
 ### Performance And Metrics
 

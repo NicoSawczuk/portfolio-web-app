@@ -15,10 +15,17 @@ function formatCurrency(value: number, currency: AssetCurrency = "USD") {
 
 function getTransactionCurrency(
   transaction: { assetType?: Transaction["assetType"]; type: Transaction["type"] },
-  portfolioCurrency: AssetCurrency = "USD"
+  portfolioCurrency: AssetCurrency = "USD",
+  assetMeta?: Asset
 ) {
-  if ((transaction.type === "buy" || transaction.type === "sell") && transaction.assetType) {
-    return getAssetCurrency(transaction.assetType);
+  if (transaction.type === "buy" || transaction.type === "sell") {
+    // La moneda real la define el activo cuando hay metadata (ej. acción en ARS).
+    if (assetMeta) {
+      return getAssetCurrency(assetMeta);
+    }
+    if (transaction.assetType) {
+      return getAssetCurrency(transaction.assetType);
+    }
   }
 
   return portfolioCurrency;
@@ -101,6 +108,7 @@ interface TransactionRow extends Transaction {
   assetName: string;
   assetSymbol: string;
   assetType: Asset["type"];
+  currency: AssetCurrency;
 }
 
 interface PortfolioTransactionsTableProps {
@@ -139,6 +147,8 @@ export default function PortfolioTransactionsTable({
 
   const portfolioCurrency = getPortfolioCurrency(portfolio);
 
+  const assetsById = useMemo(() => new Map(assets.map((asset) => [asset.id, asset])), [assets]);
+
   const sortedAssets = useMemo(() => {
     return assets
       .filter((asset) => getAssetCurrency(asset) === portfolioCurrency)
@@ -169,6 +179,7 @@ export default function PortfolioTransactionsTable({
       })
       .map((transaction) => {
         const isAssetTransaction = isAssetTransactionType(transaction.type);
+        const assetMeta = transaction.assetId ? assetsById.get(transaction.assetId) : undefined;
 
         return {
           ...transaction,
@@ -176,9 +187,10 @@ export default function PortfolioTransactionsTable({
           assetName: transaction.assetName?.trim() || "Efectivo",
           assetSymbol: transaction.assetSymbol?.trim() || (isAssetTransaction ? "" : "Efectivo"),
           assetType: transaction.assetType || (isAssetTransaction ? "other" : "cash"),
+          currency: getTransactionCurrency(transaction, portfolioCurrency, assetMeta),
         };
       });
-  }, [lockedAssetId, portfolio.transactions]);
+  }, [assetsById, lockedAssetId, portfolio.transactions, portfolioCurrency]);
 
   const sortedTransactions = useMemo(() => {
     const rows = [...transactionRows];
@@ -448,8 +460,8 @@ export default function PortfolioTransactionsTable({
                     </td>
                     {!hideSymbolColumn ? <td className="px-3 py-3">{transaction.assetSymbol || "-"}</td> : null}
                     <td className="px-3 py-3 text-right">{transaction.quantity ?? "-"}</td>
-                    <td className="px-3 py-3 text-right">{formatCurrency(transaction.price, getTransactionCurrency(transaction, portfolioCurrency))}</td>
-                    <td className="px-3 py-3 text-right">{amount === null ? "-" : formatCurrency(amount, getTransactionCurrency(transaction, portfolioCurrency))}</td>
+                    <td className="px-3 py-3 text-right">{formatCurrency(transaction.price, transaction.currency)}</td>
+                    <td className="px-3 py-3 text-right">{amount === null ? "-" : formatCurrency(amount, transaction.currency)}</td>
                     <td className="px-3 py-3">
                       <div className="flex justify-center gap-2">
                         <button

@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
 import { readAssetById } from "@/lib/asset-db";
 import { getSessionFromRequest } from "@/lib/auth";
-import { getAssetCurrency, getPortfolioCurrency } from "@/lib/portfolio";
+import { getAssetCurrency, getPortfolioCurrency, normalizeAssetCurrency } from "@/lib/portfolio";
 import type { Asset, Transaction, TransactionType } from "@/lib/portfolio";
 
 function createObjectId() {
@@ -121,12 +121,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json(updatedPortfolio);
   }
 
-  const { symbol, name, type, price, price_ars } = body as {
+  const { symbol, name, type, price, currency } = body as {
     symbol: string;
     name: string;
     type: Asset["type"];
     price?: number;
-    price_ars?: number;
+    currency?: Asset["currency"];
   };
 
   if (!symbol?.trim() || !name?.trim()) {
@@ -143,8 +143,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     symbol: symbol.trim().toUpperCase(),
     name: name.trim(),
     type,
-    price: type === "cedear" ? 0 : Number(price ?? 0),
-    price_ars: type === "cedear" ? Number(price_ars ?? 0) : undefined,
+    currency: normalizeAssetCurrency(currency, type),
+    price: Number(price ?? 0),
+    price_ars: undefined,
   };
 
   portfolio.assets = [nextAsset, ...portfolio.assets];
@@ -166,13 +167,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const body = await request.json();
 
   if (body?.kind === "asset") {
-    const { assetId, symbol, name, type, price, price_ars } = body as {
+    const { assetId, symbol, name, type, price, currency } = body as {
       assetId: string;
       symbol: string;
       name: string;
       type: Asset["type"];
       price: number;
-      price_ars?: number;
+      currency?: Asset["currency"];
     };
 
     if (!assetId || !symbol?.trim() || !name?.trim()) {
@@ -191,8 +192,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             symbol: symbol.trim().toUpperCase(),
             name: name.trim(),
             type,
-            price: type === "cedear" ? 0 : Number(price ?? asset.price),
-            price_ars: type === "cedear" ? Number(price_ars ?? asset.price_ars ?? 0) : undefined,
+            currency: normalizeAssetCurrency(currency, type ?? asset.type),
+            price: Number(price ?? asset.price),
+            price_ars: undefined,
           }
         : asset
     );
