@@ -25,7 +25,7 @@ Then select the task path below.
 | Transactions | `DOMAIN.md`, `DATABASE.md`, `CALCULATIONS.md` | `src/lib/portfolio.ts`, transaction API routes, `AddTransactionButton.tsx`, `PortfolioTransactionsTable.tsx` |
 | Cash | `DOMAIN.md`, `CALCULATIONS.md` | `src/lib/portfolio.ts`, `src/lib/portfolio-summary.ts`, relevant transaction routes |
 | Assets | `PROJECT.md`, `DOMAIN.md` | `src/lib/asset-db.ts`, `src/app/api/assets/route.ts` |
-| Pricing / integrations | `PROJECT.md`, relevant integration docs | `src/lib/finnhub-service.ts`, `src/lib/coinmarketcap-service.ts`, `src/lib/byma-service.ts`, relevant API routes (`/api/byma/cedears`) |
+| Pricing / integrations | `PROJECT.md`, relevant integration docs | `src/lib/finnhub-service.ts`, `src/lib/coinmarketcap-service.ts`, `src/lib/byma-service.ts`, `src/lib/data912-service.ts`, relevant API routes (`/api/byma/cedears`, `/api/data912/arg-stocks`) |
 | Holdings / positions | `DOMAIN.md`, `CALCULATIONS.md` | `src/lib/portfolio-positions.ts`, `src/lib/portfolio.ts` |
 | Performance / metrics | `CALCULATIONS.md` | `src/lib/portfolio-summary.ts`, `src/lib/portfolio-positions.ts` |
 | Dashboard / portfolio UI | `ARCHITECTURE.md`, `VISUAL.md`, `WORKFLOWS.md` | `src/app/page.tsx`, `src/components/HomeHeroCard.tsx`, `src/components/PortfolioDashboardClient.tsx`, `src/components/PortfolioV3MainClient.tsx` |

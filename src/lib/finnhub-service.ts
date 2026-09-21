@@ -1,5 +1,5 @@
 import type { Asset } from "@/lib/portfolio";
-import { getAssetCurrentPrice, isCedearAsset } from "@/lib/portfolio";
+import { getAssetCurrency, getAssetCurrentPrice, isCedearAsset } from "@/lib/portfolio";
 import {
   getCoinMarketCapPricesForAssets,
   isCoinMarketCapConfigured,
@@ -10,6 +10,11 @@ import {
   isBymaConfigured,
   isBymaEligibleAsset,
 } from "@/lib/byma-service";
+import {
+  getData912ArgStockPricesForAssets,
+  isData912Configured,
+  isData912EligibleAsset,
+} from "@/lib/data912-service";
 
 const FINNHUB_API_BASE_URL = process.env.FINNHUB_API_BASE_URL ?? "https://finnhub.io/api/v1";
 const FINNHUB_API_TOKEN = process.env.FINNHUB_API_TOKEN;
@@ -40,7 +45,13 @@ function getQuoteRefreshMs() {
 }
 
 function isFinnhubEligibleAsset(asset: Asset) {
-  return (asset.type === "stock" || asset.type === "etf") && Boolean(asset.symbol?.trim());
+  // Finnhub cotiza acciones/ETF en USD. Un activo cotizado en ARS (CEDEAR o
+  // acción en ARS) nunca debe tomar precio USD de Finnhub.
+  return (
+    (asset.type === "stock" || asset.type === "etf") &&
+    getAssetCurrency(asset) === "USD" &&
+    Boolean(asset.symbol?.trim())
+  );
 }
 
 function hasFreshQuote(asset: Asset, nowMs: number, refreshMs: number) {
@@ -128,6 +139,7 @@ export async function refreshAssetsQuotesWithCache(
   const quoteBySymbol = new Map<string, { price: number; updatedAt: string }>();
   const cryptoQuoteByAssetId = new Map<string, { price: number; updatedAt: string }>();
   const bymaQuoteByAssetId = new Map<string, { price: number; updatedAt: string }>();
+  const data912QuoteByAssetId = new Map<string, { price: number; updatedAt: string }>();
   const loadFinnhubQuotes = async () => {
     if (!hasFinnhubCredentials()) {
       return;
@@ -187,17 +199,40 @@ export async function refreshAssetsQuotesWithCache(
     for (const [assetId, quote] of quotesByAssetId) {
       // BYMA solo devuelve cotizaciones válidas (bidPrice > 0); si el símbolo no
       // está en el mapa es porque fuera de mercado no hay precio correcto y no
-      // se debe pisar el último precio_ars conocido.
+      // se debe pisar el último precio ARS conocido.
       bymaQuoteByAssetId.set(assetId, quote);
     }
   };
 
-  await Promise.allSettled([loadFinnhubQuotes(), loadCoinMarketCapQuotes(), loadBymaQuotes()]);
+  const loadData912Quotes = async () => {
+    if (!isData912Configured()) {
+      return;
+    }
+
+    const assetsToRefresh = assets.filter(
+      (asset) => isData912EligibleAsset(asset) && (forceRefresh || !hasFreshQuote(asset, nowMs, refreshMs))
+    );
+
+    if (assetsToRefresh.length === 0) {
+      return;
+    }
+
+    const quotesByAssetId = await getData912ArgStockPricesForAssets(assetsToRefresh);
+    for (const [assetId, quote] of quotesByAssetId) {
+      // Data912 solo devuelve cotizaciones válidas (px_bid > 0); si el símbolo no
+      // está en el mapa es porque fuera de mercado no hay precio correcto y no
+      // se debe pisar el último precio ARS conocido.
+      data912QuoteByAssetId.set(assetId, quote);
+    }
+  };
+
+  await Promise.allSettled([loadFinnhubQuotes(), loadCoinMarketCapQuotes(), loadBymaQuotes(), loadData912Quotes()]);
 
   const hydratedAssets = assets.map((asset) => {
     const isCryptoByCmc = isCoinMarketCapEligibleAsset(asset);
     const isCedearByByma = isCedearAsset(asset) && !isCryptoByCmc;
-    const isLiveEligible = isFinnhubEligibleAsset(asset) || isCryptoByCmc || isCedearByByma;
+    const isArsStockByData912 = isData912EligibleAsset(asset);
+    const isLiveEligible = isFinnhubEligibleAsset(asset) || isCryptoByCmc || isCedearByByma || isArsStockByData912;
 
     if (!isLiveEligible) {
       return {
@@ -207,13 +242,13 @@ export async function refreshAssetsQuotesWithCache(
       };
     }
 
-    if (isCedearByByma) {
-      const refreshedQuote = bymaQuoteByAssetId.get(asset.id);
+    if (isArsStockByData912) {
+      const refreshedQuote = data912QuoteByAssetId.get(asset.id);
 
       if (refreshedQuote) {
         return {
           ...asset,
-          price_ars: refreshedQuote.price,
+          price: refreshedQuote.price,
           priceSource: "live" as const,
           quoteCheckedAt: checkedAtIso,
           quoteUpdatedAt: refreshedQuote.updatedAt,
@@ -228,7 +263,36 @@ export async function refreshAssetsQuotesWithCache(
         };
       }
 
-      // Sin cotización válida de BYMA se conserva price_ars y quoteUpdatedAt.
+      // Sin cotización válida de Data912 se conserva el precio y quoteUpdatedAt.
+      return {
+        ...asset,
+        priceSource: "local" as const,
+        quoteCheckedAt: checkedAtIso,
+      };
+    }
+
+    if (isCedearByByma) {
+      const refreshedQuote = bymaQuoteByAssetId.get(asset.id);
+
+      if (refreshedQuote) {
+        return {
+          ...asset,
+          price: refreshedQuote.price,
+          priceSource: "live" as const,
+          quoteCheckedAt: checkedAtIso,
+          quoteUpdatedAt: refreshedQuote.updatedAt,
+        };
+      }
+
+      if (hasFreshQuote(asset, nowMs, refreshMs)) {
+        return {
+          ...asset,
+          priceSource: "live" as const,
+          quoteCheckedAt: checkedAtIso,
+        };
+      }
+
+      // Sin cotización válida de BYMA se conserva el precio y quoteUpdatedAt.
       return {
         ...asset,
         priceSource: "local" as const,

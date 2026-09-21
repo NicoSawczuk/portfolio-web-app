@@ -162,7 +162,7 @@ export function buildPortfolioPositionsAnalytics(
     .map<OpenPositionSummary>((item) => {
       const meta = assetById.get(item.assetId);
       const type = item.type || meta?.type || "other";
-      const currency = getAssetCurrency(meta?.type ?? item.type);
+      const currency = meta ? getAssetCurrency(meta) : getAssetCurrency(item.type);
       const currentPrice = meta ? getAssetCurrentPrice(meta) : 0;
       const marketValue = item.quantity * currentPrice;
       const investedValue = item.quantity * item.avgBuyPrice;
@@ -242,7 +242,7 @@ export function buildPortfolioPositionsAnalytics(
         symbol: item.symbol || meta?.symbol || "",
         name: item.name || meta?.name || "Activo",
         type: item.type || meta?.type || "other",
-        currency: getAssetCurrency(meta?.type ?? item.type),
+        currency: meta ? getAssetCurrency(meta) : getAssetCurrency(item.type),
         realizedPnl: item.realizedPnl,
         realizedPnlPct,
         investedCapital,

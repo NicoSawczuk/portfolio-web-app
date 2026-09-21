@@ -4,6 +4,7 @@ import { refreshAssetsQuotesWithCache } from "@/lib/finnhub-service";
 import { getSessionFromRequest } from "@/lib/auth";
 import { ASSET_PERMISSIONS } from "@/lib/permissions";
 import { hasUserPermission } from "@/lib/user-permissions-db";
+import { normalizeAssetCurrency } from "@/lib/portfolio";
 import type { Asset } from "@/lib/portfolio";
 
 function normalizePartnerId(value: unknown) {
@@ -73,12 +74,12 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { symbol, name, type, price, price_ars, id_partner } = body as {
+  const { symbol, name, type, price, currency, id_partner } = body as {
     symbol: string;
     name: string;
     type: Asset["type"];
     price?: number;
-    price_ars?: number;
+    currency?: Asset["currency"];
     id_partner?: number;
   };
 
@@ -92,19 +93,21 @@ export async function POST(request: Request) {
   }
 
   const normalizedPrice = normalizePrice(price);
-  const normalizedPriceArs = normalizePrice(price_ars);
-  if (normalizedPrice === null || normalizedPriceArs === null) {
+  if (normalizedPrice === null) {
     return NextResponse.json({ error: "El precio debe ser un número mayor o igual a 0." }, { status: 400 });
   }
+
+  const assetCurrency = normalizeAssetCurrency(currency, type);
 
   const newAsset: Asset = {
     id: createAssetId(),
     symbol: symbol.trim().toUpperCase(),
     name: name.trim(),
     type,
+    currency: assetCurrency,
     id_partner: normalizedPartnerId,
-    price: type === "cedear" ? 0 : normalizedPrice,
-    price_ars: type === "cedear" ? normalizedPriceArs : undefined,
+    price: normalizedPrice,
+    price_ars: undefined,
   };
 
   await insertAsset(newAsset);
@@ -122,13 +125,13 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json();
-  const { id, symbol, name, type, price, price_ars, id_partner } = body as {
+  const { id, symbol, name, type, price, currency, id_partner } = body as {
     id: string;
     symbol: string;
     name: string;
     type: Asset["type"];
     price?: number;
-    price_ars?: number;
+    currency?: Asset["currency"];
     id_partner?: number;
   };
 
@@ -142,18 +145,20 @@ export async function PUT(request: Request) {
   }
 
   const normalizedPrice = normalizePrice(price);
-  const normalizedPriceArs = normalizePrice(price_ars);
-  if (normalizedPrice === null || normalizedPriceArs === null) {
+  if (normalizedPrice === null) {
     return NextResponse.json({ error: "El precio debe ser un número mayor o igual a 0." }, { status: 400 });
   }
+
+  const assetCurrency = normalizeAssetCurrency(currency, type);
 
   const updated = await updateAssetById(id, {
     symbol: symbol.trim().toUpperCase(),
     name: name.trim(),
     type,
+    currency: assetCurrency,
     id_partner: normalizedPartnerId,
-    price: type === "cedear" ? 0 : normalizedPrice,
-    price_ars: type === "cedear" ? normalizedPriceArs : undefined,
+    price: normalizedPrice,
+    price_ars: undefined,
   });
 
   if (!updated) {

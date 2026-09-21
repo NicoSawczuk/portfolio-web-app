@@ -19,7 +19,7 @@ Source: `README.md`, `src/app/*`, `src/components/*`, `src/app/api/*`.
 
 Business intent from `AI Project Audit - Portfolio Web App.md`:
 
-- Track personal investments in stocks, ETFs, cryptocurrencies and CEDEARs.
+- Track personal investments in stocks (USD and ARS), ETFs, cryptocurrencies and CEDEARs.
 - Combine manually recorded transactions with current prices.
 - Calculate portfolio value, positions, returns, profit/loss and metrics.
 - Support cash balances for portfolios where deposits fund later purchases.
@@ -28,7 +28,7 @@ Current implementation:
 
 - Supports asset types `stock`, `etf`, `crypto`, `bond`, `cash`, `other`, `cedear`.
 - Records transactions of type `buy`, `sell`, `cash_in`, `cash_out`.
-- Uses the effective global asset price for current market values (`price_ars` in ARS for `cedear`, `price` in USD otherwise).
+- Uses the effective global asset price for current market values (`getAssetCurrentPrice()`: `price` in the asset currency, `price_ars` fallback for legacy `cedear`). Assets carry an explicit `currency` (`USD`/`ARS`), enabling ARS stocks.
 - Calculates holdings, cash and P/L from transaction arrays at render/query time.
 
 ## Intended Users
@@ -73,9 +73,10 @@ Confirmed type union: `src/lib/portfolio.ts`
 
 External live pricing is implemented only for:
 
-- `stock` and `etf` via Finnhub.
+- `stock` and `etf` (USD) via Finnhub; ARS-quoted assets are excluded so a USD quote never overwrites an ARS price.
 - mapped `crypto` assets via CoinMarketCap.
-- `cedear` assets via BYMA (ARS, `price_ars`; invalid quotes never overwrite the stored price).
+- `cedear` assets via BYMA (ARS; invalid quotes never overwrite the stored price).
+- `stock` assets in ARS via Data912 (`/live/arg_stocks`; invalid quotes never overwrite the stored price).
 
 ## Portfolio Concepts
 

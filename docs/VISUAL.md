@@ -258,6 +258,6 @@ Technical rules already in force (do not remove):
 
 - `npm run lint` (and `npm run build` if you touched `layout.tsx` / global CSS).
 - Exercise the light/dark header toggle (desktop + mobile) with no flash or mismatch.
-- Review in both themes: header, hero/home, tables (including the first row), modals, sky/cyan chips (CEDEAR), live/local badges, keyboard focus.
+- Review in both themes: header, hero/home, tables (including the first row), modals, chips (type: sky/cyan/amber/violet/emerald/indigo; currency: neutral badge, same colors as `.home-currency-badge`, no per-theme overrides beyond the light text tint), live/local badges, keyboard focus.
 - On mobile also: no excessive nested cards, secondary grids in 2 columns,
   horizontally scrolling tables when they don't compress, primary-datum hierarchy intact.

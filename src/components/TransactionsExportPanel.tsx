@@ -29,10 +29,17 @@ interface ExportRow {
 
 function getExportTransactionCurrency(
   transaction: { assetType?: Asset["type"]; type: string },
-  portfolioCurrency: AssetCurrency
+  portfolioCurrency: AssetCurrency,
+  assetMeta?: Asset
 ): AssetCurrency {
-  if ((transaction.type === "buy" || transaction.type === "sell") && transaction.assetType) {
-    return getAssetCurrency(transaction.assetType);
+  if (transaction.type === "buy" || transaction.type === "sell") {
+    // La moneda real la define el activo cuando hay metadata (ej. acción en ARS).
+    if (assetMeta) {
+      return getAssetCurrency(assetMeta);
+    }
+    if (transaction.assetType) {
+      return getAssetCurrency(transaction.assetType);
+    }
   }
   return portfolioCurrency;
 }
@@ -70,7 +77,8 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
         const resolvedAssetType = transaction.assetType ?? assetMeta?.type;
         const transactionCurrency = getExportTransactionCurrency(
           { assetType: resolvedAssetType, type: transaction.type },
-          portfolioCurrency
+          portfolioCurrency,
+          assetMeta
         );
         const assetCurrency = resolvedAssetType ? getAssetCurrency(resolvedAssetType) : "";
         const assetPriceCurrency = assetMeta ? getAssetCurrency(assetMeta) : assetCurrency;
@@ -95,7 +103,8 @@ export default function TransactionsExportPanel({ initialPortfolios, initialAsse
           assetCurrency,
           assetPrice: assetMeta ? getAssetCurrentPrice(assetMeta) : 0,
           assetPriceCurrency,
-          assetPriceArs: assetMeta?.price_ars ?? "",
+          assetPriceArs:
+          assetMeta && getAssetCurrency(assetMeta) === "ARS" ? getAssetCurrentPrice(assetMeta) : "",
         };
       });
     });

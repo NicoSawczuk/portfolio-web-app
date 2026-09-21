@@ -1,5 +1,6 @@
 import { Collection, ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { getAssetCurrency } from "@/lib/portfolio";
 import type { Asset } from "@/lib/portfolio";
 
 const collectionName = "assets";
@@ -25,18 +26,18 @@ function normalizeAsset(asset: Asset): Asset {
   // It is not part of the Asset type anymore and is stripped here.
   const { transactions: _legacyTransactions, ...rest } = asset as Asset & { transactions?: unknown };
   void _legacyTransactions;
+  const price = Number(rest.price);
   const priceArs = Number(rest.price_ars);
+  const currency = rest.currency === "ARS" || rest.currency === "USD" ? rest.currency : undefined;
+  const isArs = getAssetCurrency(rest) === "ARS";
+
   return {
     ...rest,
     id: rest.id || new ObjectId().toHexString(),
+    currency,
+    price: Number.isFinite(price) && price >= 0 ? price : 0,
     price_ars:
-      rest.type === "cedear"
-        ? Number.isFinite(priceArs) && priceArs > 0
-          ? priceArs
-          : 0
-        : Number.isFinite(priceArs) && priceArs > 0
-          ? priceArs
-          : undefined,
+      isArs && Number.isFinite(priceArs) && priceArs > 0 ? priceArs : undefined,
   };
 }
 
@@ -48,7 +49,7 @@ interface ReadAssetsOptions {
 export async function readAssets(options: ReadAssetsOptions = {}): Promise<Asset[]> {
   const collection = await getAssetsCollection();
   const projection = options.minimal
-    ? { _id: 0, id: 1, symbol: 1, name: 1, type: 1, price: 1, price_ars: 1 }
+    ? { _id: 0, id: 1, symbol: 1, name: 1, type: 1, currency: 1, price: 1, price_ars: 1 }
     : { _id: 0 };
   const assets = await collection.find({}, { projection }).sort({ _id: -1 }).toArray();
 
@@ -99,7 +100,7 @@ export async function insertAsset(asset: Asset): Promise<Asset> {
 
 export async function updateAssetById(
   id: string,
-  fields: Partial<Pick<Asset, "symbol" | "name" | "type" | "id_partner" | "price" | "price_ars" | "quoteCheckedAt" | "quoteUpdatedAt">>
+  fields: Partial<Pick<Asset, "symbol" | "name" | "type" | "currency" | "id_partner" | "price" | "price_ars" | "quoteCheckedAt" | "quoteUpdatedAt">>
 ): Promise<Asset | null> {
   const collection = await getAssetsCollection();
   const update: Partial<Asset> = {};
@@ -112,6 +113,9 @@ export async function updateAssetById(
   }
   if (typeof fields.type === "string") {
     update.type = fields.type;
+  }
+  if (fields.currency === undefined || fields.currency === "ARS" || fields.currency === "USD") {
+    update.currency = fields.currency;
   }
   if (fields.id_partner === undefined || typeof fields.id_partner === "number") {
     update.id_partner = fields.id_partner;
