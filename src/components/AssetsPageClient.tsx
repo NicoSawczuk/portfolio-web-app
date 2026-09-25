@@ -561,7 +561,7 @@ export default function AssetsPageClient({
                             onChange={() => toggleCurrencyFilter(item.value)}
                             className="modal-checkbox"
                           />
-                          <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getCurrencyChipClass(item.value)}`}>
+                          <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getCurrencyChipClass()}`}>
                             {item.label}
                           </span>
                           <span className="assets-type-dropdown-count">{assetCountByCurrency.get(item.value) ?? 0}</span>
@@ -591,7 +591,7 @@ export default function AssetsPageClient({
                       <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getAssetTypeChipClass(asset.type)}`}>
                         {assetTypes.find((item) => item.value === asset.type)?.label}
                       </span>
-                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getCurrencyChipClass(getAssetCurrency(asset))}`}>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getCurrencyChipClass()}`}>
                         {getAssetCurrency(asset)}
                       </span>
                     </div>

@@ -119,6 +119,6 @@ export function getAssetTypeChipClass(type: Asset["type"]) {
   return classesByType[type] ?? classesByType.other;
 }
 
-export function getCurrencyChipClass(_currency: AssetCurrency) {
+export function getCurrencyChipClass() {
   return "assets-currency-chip";
 }

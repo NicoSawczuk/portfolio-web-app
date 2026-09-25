@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { readAssetBySymbol } from "@/lib/asset-db";
+import { resolveAssetForTransaction } from "@/lib/asset-db";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
 import { getAssetCurrency, getPortfolioCurrency } from "@/lib/portfolio";
 import { isUserActive } from "@/lib/auth";
@@ -190,7 +190,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const symbol = body.symbol.trim().toUpperCase();
-    const assetMetadata = await readAssetBySymbol(symbol);
+
+    // La moneda del portfolio manda: se reutiliza la posición existente del mismo
+    // símbolo y, si no hay, se resuelve en el catálogo global prefiriendo la moneda
+    // del portfolio. Evita colgar la transacción de un ticker duplicado en otra moneda.
+    const assetMetadata = await resolveAssetForTransaction(
+      portfolio.assets,
+      symbol,
+      getPortfolioCurrency(portfolio)
+    );
 
     if (!assetMetadata) {
       return errorResponse(`Activo no encontrado para el símbolo "${symbol}".`, 404);

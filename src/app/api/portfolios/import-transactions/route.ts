@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { readAssetBySymbol } from "@/lib/asset-db";
+import { resolveAssetForTransaction } from "@/lib/asset-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { getAssetCurrency, getPortfolioCurrency } from "@/lib/portfolio";
 import type { Transaction, TransactionType } from "@/lib/portfolio";
@@ -131,7 +131,13 @@ export async function POST(request: Request) {
       }
 
       const symbol = raw.symbol.trim().toUpperCase();
-      const assetMetadata = await readAssetBySymbol(symbol);
+      // Se consideran también los assets agregados por filas anteriores del mismo lote,
+      // para que varias compras del mismo ticker en una misma moneda no se separen.
+      const assetMetadata = await resolveAssetForTransaction(
+        [...assetsToAdd.values(), ...portfolio.assets],
+        symbol,
+        portfolioCurrency
+      );
       if (!assetMetadata) {
         errors.push({ index, error: `${prefix}: activo no encontrado para el símbolo "${symbol}".` });
         continue;

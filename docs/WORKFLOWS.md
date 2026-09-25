@@ -239,7 +239,7 @@ External caller
   -> caller must hold users_permissions { userId, action: "n8n_transactions:create" } (403 otherwise)
   -> readPortfolioById(id); missing or foreign portfolio returns 404
   -> validate type/date/price/notes
-  -> for buy/sell: validate symbol/quantity and read global asset by symbol
+  -> for buy/sell: validate symbol/quantity; resolve the asset with resolveAssetForTransaction (portfolio currency wins over the catalog's duplicated tickers)
   -> prepend transaction
   -> replacePortfolioById(id, portfolio, caller.id) scoped by ownerUserId
   -> return { ok, portfolioId, transactionId, transaction }
@@ -255,6 +255,25 @@ Important difference from UI API:
 - Uses API key plus `telegramUserId` instead of user session.
 - Is scoped by owner user id: the portfolio must belong to the `telegramUserId` caller.
 - Rejects with 400 if the asset currency != portfolio currency (same invariant as the UI API).
+- Symbol resolution goes through `resolveAssetForTransaction`, so buy/sell always attach to an asset whose currency matches the portfolio; the only path that resolves by symbol alone.
+
+## Asset Resolution By Symbol
+
+```text
+resolveAssetForTransaction(portfolioAssets, symbol, portfolioCurrency)  (src/lib/asset-db.ts)
+  -> normalize symbol (trim + uppercase); empty symbol returns null
+  -> reuse the portfolio's own position for that symbol *in the portfolio currency* (same id)
+  -> otherwise read every catalog asset sharing the symbol and prefer the candidate
+     whose currency equals the portfolio currency, falling back to the first candidate
+  -> callers keep the asset-currency-must-match-portfolio-currency check, so the
+     fallback candidate still fails loudly instead of mixing currencies
+```
+
+Why: `{ symbol: 1 }` is a non-unique index, so the same ticker can exist in the catalog
+in more than one currency (e.g. `GGAL` in ARS and `GGAL` in USD). Resolving by
+`symbol` alone returned whichever document came first, which split positions or mixed
+currencies. Every by-symbol path must go through this helper; `GET`-style UI flows
+already send `assetId` and are unaffected.
 
 ## Transactions Export
 
@@ -279,6 +298,8 @@ Important difference from UI API:
      - price > 0 and date YYYY-MM-DD always required; notes optional (<= 1000 chars)
   -> POST /api/portfolios/import-transactions (session auth, portfolio must belong to user)
   -> atomic server validation: any row error aborts with 400 + per-row errors
+  -> buy/sell rows resolve their asset with resolveAssetForTransaction, considering assets
+     already added by earlier rows of the same batch
   -> asset currency must match portfolio currency (same invariant as other transaction APIs)
   -> missing portfolio assets are added; transactions are prepended
 ```

@@ -1,7 +1,7 @@
 import { Collection, ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getAssetCurrency } from "@/lib/portfolio";
-import type { Asset } from "@/lib/portfolio";
+import type { Asset, AssetCurrency } from "@/lib/portfolio";
 
 const collectionName = "assets";
 
@@ -67,28 +67,65 @@ export async function readAssetById(id: string): Promise<Asset | null> {
 }
 
 export async function readAssetBySymbol(symbol: string): Promise<Asset | null> {
+  const assets = await readAssetsBySymbol(symbol);
+  return assets[0] ?? null;
+}
+
+// Todos los assets que comparten un símbolo (el catálogo puede tener duplicados
+// del mismo ticker en distintas monedas, p. ej. GGAL ARS y GGAL USD).
+export async function readAssetsBySymbol(symbol: string): Promise<Asset[]> {
+  const normalized = symbol.trim().toUpperCase();
+  if (!normalized) {
+    return [];
+  }
+
+  const collection = await getAssetsCollection();
+  const assets = await collection
+    .find({ symbol: normalized }, { projection: { _id: 0 } })
+    .map(normalizeAsset)
+    .toArray();
+  if (assets.length > 0) {
+    return assets;
+  }
+
+  // Fallback case-insensitive para documentos legacy con símbolo en minúsculas.
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return collection
+    .find({ symbol: { $regex: `^${escaped}$`, $options: "i" } }, { projection: { _id: 0 } })
+    .map(normalizeAsset)
+    .toArray();
+}
+
+// Resuelve el activo de una transacción buy/sell a partir del símbolo. Como el catálogo
+// global admite tickers duplicados en distintas monedas (p. ej. GGAL en ARS y GGAL en
+// USD), la moneda del portfolio manda: primero se reutiliza la posición que el portfolio
+// ya tiene para ese símbolo en esa misma moneda, y solo si no existe se recurre al
+// catálogo global prefiriendo el candidato con moneda coincidente.
+export async function resolveAssetForTransaction(
+  portfolioAssets: Asset[],
+  symbol: string,
+  portfolioCurrency: AssetCurrency
+): Promise<Asset | null> {
   const normalized = symbol.trim().toUpperCase();
   if (!normalized) {
     return null;
   }
 
-  const collection = await getAssetsCollection();
-  const asset = await collection.findOne({ symbol: normalized }, { projection: { _id: 0 } });
-  if (asset) {
-    return normalizeAsset(asset);
-  }
-
-  // Fallback case-insensitive para documentos legacy con símbolo en minúsculas.
-  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const fallback = await collection.findOne(
-    { symbol: { $regex: `^${escaped}$`, $options: "i" } },
-    { projection: { _id: 0 } }
+  const existingAsset = portfolioAssets.find(
+    (asset) =>
+      asset.symbol?.trim().toUpperCase() === normalized &&
+      getAssetCurrency(asset) === portfolioCurrency
   );
-  if (!fallback) {
-    return null;
+  if (existingAsset) {
+    return existingAsset;
   }
 
-  return normalizeAsset(fallback);
+  const candidates = await readAssetsBySymbol(normalized);
+  return (
+    candidates.find((candidate) => getAssetCurrency(candidate) === portfolioCurrency) ??
+    candidates[0] ??
+    null
+  );
 }
 
 export async function insertAsset(asset: Asset): Promise<Asset> {
