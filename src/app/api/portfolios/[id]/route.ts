@@ -48,12 +48,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       type: TransactionType;
     };
 
-    if (!type || !["buy", "sell", "cash_in", "cash_out"].includes(type)) {
+    if (!type || !["buy", "sell", "cash_in", "cash_out", "dividend"].includes(type)) {
       return NextResponse.json({ error: "El tipo de transacción es obligatorio." }, { status: 400 });
     }
 
     if ((type === "buy" || type === "sell") && (!assetId || !date || !quantity || !price)) {
       return NextResponse.json({ error: "Faltan datos para crear la transacción de activo." }, { status: 400 });
+    }
+
+    if (type === "dividend" && (!assetId || !date || !price)) {
+      return NextResponse.json({ error: "Faltan datos para crear el dividendo." }, { status: 400 });
     }
 
     if ((type === "cash_in" || type === "cash_out") && (!date || !price)) {
@@ -73,7 +77,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       notes,
     };
 
-    if (type === "buy" || type === "sell") {
+    if (type === "buy" || type === "sell" || type === "dividend") {
       const assetMetadata = assetId ? await readAssetById(assetId) : null;
 
       if (!assetMetadata) {
@@ -93,13 +97,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         portfolio.assets = [portfolioAsset, ...portfolio.assets];
       }
 
+      // El dividendo se registra con el monto total cobrado en `price`; no
+      // tiene cantidad ni precio unitario.
       const transactionWithAsset: Transaction = {
         ...nextTransaction,
         assetId,
         assetSymbol: assetSymbol || assetMetadata.symbol,
         assetName: assetName || assetMetadata.name,
         assetType: assetType || assetMetadata.type,
-        quantity: Number(quantity ?? 0),
+        quantity: type === "dividend" ? undefined : Number(quantity ?? 0),
       };
 
       portfolio.transactions = [transactionWithAsset, ...portfolio.transactions];
@@ -228,12 +234,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "El ID de la transacción es obligatorio." }, { status: 400 });
   }
 
-  if (!type || !["buy", "sell", "cash_in", "cash_out"].includes(type)) {
+  if (!type || !["buy", "sell", "cash_in", "cash_out", "dividend"].includes(type)) {
     return NextResponse.json({ error: "El tipo de transacción es obligatorio." }, { status: 400 });
   }
 
   if ((type === "buy" || type === "sell") && (!assetId || !date || !quantity || !price)) {
     return NextResponse.json({ error: "Faltan datos para editar la transacción de activo." }, { status: 400 });
+  }
+
+  if (type === "dividend" && (!assetId || !date || !price)) {
+    return NextResponse.json({ error: "Faltan datos para editar el dividendo." }, { status: 400 });
   }
 
   if ((type === "cash_in" || type === "cash_out") && (!date || !price)) {
@@ -251,7 +261,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Transacción no encontrada." }, { status: 404 });
   }
 
-  if (type === "buy" || type === "sell") {
+  if (type === "buy" || type === "sell" || type === "dividend") {
     const assetMetadata = assetId ? await readAssetById(assetId) : null;
 
     if (!assetMetadata) {
@@ -278,7 +288,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       assetSymbol: assetSymbol || assetMetadata.symbol,
       assetName: assetName || assetMetadata.name,
       assetType: assetType || assetMetadata.type,
-      quantity: Number(quantity ?? 0),
+      quantity: type === "dividend" ? undefined : Number(quantity ?? 0),
       price: Number(price ?? 0),
       date,
       notes,

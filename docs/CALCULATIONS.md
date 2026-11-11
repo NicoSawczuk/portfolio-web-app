@@ -20,7 +20,7 @@ This is a high-risk reference. Before modifying financial logic, inspect the imp
 - Transaction arrays are sorted by string `date` using `localeCompare`.
 - Expected date format is `YYYY-MM-DD`, but normal portfolio API does not strictly validate it.
 - Asset current price comes from global `assets` input, not from transaction price.
-- Fees, taxes, dividends, splits and FX conversion are not modeled.
+- Dividends are modeled as `dividend` transactions (asset + total amount in `price`, no quantity). They add to the asset's P/L and to cash balance for cash-managed portfolios. Fees, taxes, splits and FX conversion are not modeled.
 
 ## Holdings In `calculatePortfolioPerformance()`
 
@@ -46,13 +46,17 @@ For each sorted transaction:
   sell:
     costToRemove = min(existing.quantity, sellQuantity) * avgBuyPrice
     quantity = max(0, existing.quantity - sellQuantity)
-    totalCost = max(0, totalCost - costToRemove)
+    totalCost = max(0, existing.totalCost - costToRemove)
     avgBuyPrice = quantity ? totalCost / quantity : 0
+
+  dividend:
+    dividendsReceived += transaction.price
 ```
 
 Outputs:
 
 - Open holdings only, filtered by `quantity > 0`.
+- Each holding tracks `dividendsReceived` (sum of all dividend amounts of that asset).
 
 Edge cases:
 
@@ -79,7 +83,7 @@ currentPrice = getAssetCurrentPrice(assetById.get(assetId)) ?? 0
   (price in the asset currency; price_ars fallback for legacy cedear)
 marketValue = quantity * currentPrice
 costBasis = quantity * avgBuyPrice
-pnl = marketValue - costBasis
+pnl = marketValue - costBasis + dividendsReceived
 pnlPct = costBasis > 0 ? pnl / costBasis : 0
 ```
 
@@ -128,6 +132,10 @@ buy:
 
 sell:
   cashBalance += quantity * price
+  cashNetContributions unchanged
+
+dividend:
+  cashBalance += price
   cashNetContributions unchanged
 ```
 
@@ -223,9 +231,14 @@ Implementation:
 Formula:
 
 ```text
-totalPnl = totalMarketValue - totalCostBasis
+totalPnl = totalMarketValue - totalCostBasis + totalDividends
 totalPnlPct = totalCostBasis > 0 ? totalPnl / totalCostBasis : 0
 ```
+
+Dividend handling:
+
+- `managesCash=true`: `totalDividends` is `0` in the formula because dividends already land in the cash balance (and therefore in `totalMarketValue`); adding them again would double count.
+- `managesCash=false`: `totalDividends` is the sum of every `dividend` transaction amount in the portfolio (`calculateTotalDividends()`), including dividends of assets whose position is already closed.
 
 Consumers:
 
@@ -301,7 +314,8 @@ Formula:
 marketValue = remaining quantity * current effective asset price
   (price in the asset currency; price_ars fallback for legacy cedear)
 investedValue = remaining quantity * avgBuyPrice
-pnl = marketValue - investedValue
+dividendsReceived = sum of dividend transaction amounts of the asset
+pnl = marketValue - investedValue + dividendsReceived
 pnlPct = investedValue > 1e-8 ? pnl / investedValue : 0
 sharePct = marketValue / totalOpenMarketValue
 ```
@@ -321,6 +335,7 @@ Cash position:
 Edge cases:
 
 - `cash_in`/`cash_out` transactions never create buy/sell accumulators; they only feed the synthetic cash position.
+- `dividend` transactions feed a per-asset `totalDividends` accumulator (and patch asset metadata) but never change quantities or cost.
 - Missing global asset price gives `0`.
 - `sharePct` includes cash when `managesCash=true`.
 
@@ -340,12 +355,17 @@ For sells:
   realizedCost += costToRemove
   realizedPnl += proceeds - costToRemove
 
+For dividends:
+  totalDividends += dividend transaction price
+
 Closed position emitted when:
   remaining quantity <= 1e-8
   totalBoughtQty > 1e-8
   totalSoldQty > 1e-8
 
 investedCapital = realizedCost
+realizedPnl = realized price P/L + totalDividends
+dividendsReceived = totalDividends
 realizedPnlPct = investedCapital > 1e-8 ? realizedPnl / investedCapital : 0
 avgBuyPrice = totalBoughtAmount / totalBoughtQty
 avgSellPrice = totalSoldAmount / totalSoldQty
@@ -372,6 +392,7 @@ Formula:
 
 ```text
 cash transaction total = transaction.price
+dividend total = transaction.price
 asset transaction total = transaction.price * transaction.quantity
 ```
 

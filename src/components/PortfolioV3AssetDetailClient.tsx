@@ -125,6 +125,12 @@ export default function PortfolioV3AssetDetailClient({
               <dd>{formatCurrencyByVisibility(openPosition.investedValue)}</dd>
             </div>
             <div>
+              <dt>Ganancia por dividendos</dt>
+              <dd className={openPosition.dividendsReceived > 0 ? "text-emerald-400" : undefined}>
+                {formatCurrencyByVisibility(openPosition.dividendsReceived)}
+              </dd>
+            </div>
+            <div>
               <dt>% del portfolio</dt>
               <dd>{formatUnsignedPercent(openPosition.sharePct)}</dd>
             </div>

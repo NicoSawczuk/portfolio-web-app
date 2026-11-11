@@ -10,7 +10,7 @@ import { hasUserPermission } from "@/lib/user-permissions-db";
 import type { Transaction, TransactionType } from "@/lib/portfolio";
 
 const PORTFOLIO_TRANSACTIONS_API_KEY = process.env.PORTFOLIO_TRANSACTIONS_API_KEY?.trim();
-const ALLOWED_TRANSACTION_TYPES: TransactionType[] = ["buy", "sell", "cash_in", "cash_out"];
+const ALLOWED_TRANSACTION_TYPES: TransactionType[] = ["buy", "sell", "cash_in", "cash_out", "dividend"];
 
 type CreateTransactionPayload = {
   type?: unknown;
@@ -179,13 +179,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     notes,
   };
 
-  if (body.type === "buy" || body.type === "sell") {
+  if (body.type === "buy" || body.type === "sell" || body.type === "dividend") {
     if (typeof body.symbol !== "string" || !body.symbol.trim()) {
-      return errorResponse("symbol es obligatorio para transacciones buy/sell (ej: BTC, AAPL, SPY).", 400);
+      return errorResponse("symbol es obligatorio para transacciones buy/sell/dividend (ej: BTC, AAPL, SPY).", 400);
     }
 
-    const quantity = parsePositiveNumber(body.quantity);
-    if (!quantity) {
+    // El dividendo registra el monto total cobrado en price; no tiene cantidad.
+    const quantity = body.type === "dividend" ? null : parsePositiveNumber(body.quantity);
+    if (body.type !== "dividend" && !quantity) {
       return errorResponse("La cantidad debe ser un número mayor a cero.", 400);
     }
 
@@ -224,7 +225,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       assetSymbol: assetMetadata.symbol,
       assetName: assetMetadata.name,
       assetType: assetMetadata.type,
-      quantity,
+      quantity: quantity ?? undefined,
     };
 
     portfolio.transactions = [transaction, ...portfolio.transactions];

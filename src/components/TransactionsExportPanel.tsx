@@ -32,7 +32,7 @@ function getExportTransactionCurrency(
   portfolioCurrency: AssetCurrency,
   assetMeta?: Asset
 ): AssetCurrency {
-  if (transaction.type === "buy" || transaction.type === "sell") {
+  if (transaction.type === "buy" || transaction.type === "sell" || transaction.type === "dividend") {
     // La moneda real la define el activo cuando hay metadata (ej. acción en ARS).
     if (assetMeta) {
       return getAssetCurrency(assetMeta);

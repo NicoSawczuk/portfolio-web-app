@@ -1,5 +1,15 @@
 export type AssetType = "stock" | "etf" | "crypto" | "bond" | "cash" | "other" | "cedear";
-export type TransactionType = "buy" | "sell" | "cash_in" | "cash_out";
+export type TransactionType = "buy" | "sell" | "cash_in" | "cash_out" | "dividend";
+
+// Transacciones que referencian un activo (compra, venta y dividendo).
+export function isAssetLinkedTransactionType(type: TransactionType) {
+  return type === "buy" || type === "sell" || type === "dividend";
+}
+
+// Transacciones de activo con cantidad y precio unitario (excluye dividendos).
+export function isAssetQuantityTransactionType(type: TransactionType) {
+  return type === "buy" || type === "sell";
+}
 export type AssetCurrency = "USD" | "ARS";
 
 export interface Transaction {
@@ -10,6 +20,8 @@ export interface Transaction {
   assetName?: string;
   assetType?: AssetType;
   quantity?: number;
+  // Precio unitario para `buy`/`sell`; monto total para `cash_in`,
+  // `cash_out` y `dividend` (en la moneda del activo o del portfolio).
   price: number;
   date: string;
   notes?: string;

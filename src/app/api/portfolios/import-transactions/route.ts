@@ -6,7 +6,7 @@ import { getAssetCurrency, getPortfolioCurrency } from "@/lib/portfolio";
 import type { Transaction, TransactionType } from "@/lib/portfolio";
 import { readPortfolioById, replacePortfolioById } from "@/lib/portfolio-db";
 
-const ALLOWED_TYPES: TransactionType[] = ["buy", "sell", "cash_in", "cash_out"];
+const ALLOWED_TYPES: TransactionType[] = ["buy", "sell", "cash_in", "cash_out", "dividend"];
 
 type ImportItem = {
   type?: unknown;
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     }
 
     if (!isTransactionType(raw.type)) {
-      errors.push({ index, error: `${prefix}: type debe ser buy, sell, cash_in o cash_out.` });
+      errors.push({ index, error: `${prefix}: type debe ser buy, sell, dividend, cash_in o cash_out.` });
       continue;
     }
 
@@ -119,13 +119,15 @@ export async function POST(request: Request) {
       continue;
     }
 
-    if (raw.type === "buy" || raw.type === "sell") {
+    if (raw.type === "buy" || raw.type === "sell" || raw.type === "dividend") {
       if (typeof raw.symbol !== "string" || !raw.symbol.trim()) {
-        errors.push({ index, error: `${prefix}: symbol es obligatorio para buy/sell (ej: AAPL, BTC).` });
+        errors.push({ index, error: `${prefix}: symbol es obligatorio para buy/sell/dividend (ej: AAPL, BTC).` });
         continue;
       }
-      const quantity = parsePositiveNumber(raw.quantity);
-      if (!quantity) {
+
+      // El dividendo registra el monto total en price; no requiere cantidad.
+      const quantity = raw.type === "dividend" ? null : parsePositiveNumber(raw.quantity);
+      if (raw.type !== "dividend" && !quantity) {
         errors.push({ index, error: `${prefix}: quantity debe ser un número mayor a cero.` });
         continue;
       }
@@ -161,7 +163,7 @@ export async function POST(request: Request) {
         assetSymbol: assetMetadata.symbol,
         assetName: assetMetadata.name,
         assetType: assetMetadata.type,
-        quantity,
+        quantity: quantity ?? undefined,
         price,
         date: raw.date,
         notes,

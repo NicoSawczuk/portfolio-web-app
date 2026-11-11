@@ -219,6 +219,12 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
                           <p className="text-slate-400">% del portfolio</p>
                           <p className="mt-0.5 text-slate-100">{showAmounts ? formatUnsignedPercent(position.sharePct) : "••••"}</p>
                         </div>
+                        {position.dividendsReceived > 0 ? (
+                          <div>
+                            <p className="text-slate-400">Dividendos</p>
+                            <p className="mt-0.5 text-emerald-400">{formatCurrencyByVisibility(position.dividendsReceived, position.currency)}</p>
+                          </div>
+                        ) : null}
                         {isCashPosition ? null : (
                           <div className="flex items-end justify-end text-slate-400">
                             <span className="text-xl leading-none">›</span>
@@ -307,6 +313,12 @@ export default function PortfolioV3MainClient({ portfolioId, initialPortfolio, i
                         <p className="text-slate-400">Fecha de cierre</p>
                         <p className="mt-0.5 text-slate-100">{formatIsoDate(position.closedAt)}</p>
                       </div>
+                      {position.dividendsReceived > 0 ? (
+                        <div>
+                          <p className="text-slate-400">Dividendos</p>
+                          <p className="mt-0.5 text-emerald-400">{formatCurrencyByVisibility(position.dividendsReceived, position.currency)}</p>
+                        </div>
+                      ) : null}
                     </div>
                   </Link>
                 );

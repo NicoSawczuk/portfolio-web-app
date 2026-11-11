@@ -104,6 +104,12 @@ export default function PortfolioV3ClosedDetailClient({
 
               <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-700/70 pt-4 sm:grid-cols-3">
                 <div>
+                  <p className="text-xs text-slate-400">Dividendos cobrados</p>
+                  <p className={`mt-1 text-sm ${closedPosition.dividendsReceived > 0 ? "text-emerald-400" : "text-slate-100"}`}>
+                    {formatCurrency(closedPosition.dividendsReceived, closedPosition.currency)}
+                  </p>
+                </div>
+                <div>
                   <p className="text-xs text-slate-400">Cantidad vendida</p>
                   <p className="mt-1 text-sm text-slate-100">{formatNumber(closedPosition.quantitySold)}</p>
                 </div>

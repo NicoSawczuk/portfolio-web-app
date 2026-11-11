@@ -13,6 +13,7 @@ export interface OpenPositionSummary {
   currentPrice: number;
   investedValue: number;
   marketValue: number;
+  dividendsReceived: number;
   pnl: number;
   pnlPct: number;
   sharePct: number;
@@ -28,6 +29,7 @@ export interface ClosedPositionSummary {
   currency: AssetCurrency;
   realizedPnl: number;
   realizedPnlPct: number;
+  dividendsReceived: number;
   investedCapital: number;
   quantitySold: number;
   avgBuyPrice: number;
@@ -59,6 +61,7 @@ interface PositionAccumulator {
   totalSoldAmount: number;
   realizedCost: number;
   realizedPnl: number;
+  totalDividends: number;
   firstBuyDate: string | null;
   lastBuyDate: string | null;
   lastSellDate: string | null;
@@ -81,6 +84,7 @@ function createAccumulator(assetId: string): PositionAccumulator {
     totalSoldAmount: 0,
     realizedCost: 0,
     realizedPnl: 0,
+    totalDividends: 0,
     firstBuyDate: null,
     lastBuyDate: null,
     lastSellDate: null,
@@ -106,7 +110,24 @@ export function buildPortfolioPositionsAnalytics(
   const accByAssetId = new Map<string, PositionAccumulator>();
 
   for (const transaction of sortedTransactions) {
-    if (!transaction.assetId || (transaction.type !== "buy" && transaction.type !== "sell")) {
+    if (!transaction.assetId) {
+      continue;
+    }
+
+    if (transaction.type === "dividend") {
+      const amount = Number(transaction.price ?? 0);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        continue;
+      }
+
+      const acc = accByAssetId.get(transaction.assetId) ?? createAccumulator(transaction.assetId);
+      patchAssetMetadata(acc, transaction, assetById.get(transaction.assetId));
+      acc.totalDividends += amount;
+      accByAssetId.set(acc.assetId, acc);
+      continue;
+    }
+
+    if (transaction.type !== "buy" && transaction.type !== "sell") {
       continue;
     }
 
@@ -166,7 +187,7 @@ export function buildPortfolioPositionsAnalytics(
       const currentPrice = meta ? getAssetCurrentPrice(meta) : 0;
       const marketValue = item.quantity * currentPrice;
       const investedValue = item.quantity * item.avgBuyPrice;
-      const pnl = marketValue - investedValue;
+      const pnl = marketValue - investedValue + item.totalDividends;
       const pnlPct = investedValue > POSITION_EPSILON ? pnl / investedValue : 0;
 
       return {
@@ -180,6 +201,7 @@ export function buildPortfolioPositionsAnalytics(
         currentPrice,
         investedValue,
         marketValue,
+        dividendsReceived: item.totalDividends,
         pnl,
         pnlPct,
         sharePct: 0,
@@ -211,6 +233,7 @@ export function buildPortfolioPositionsAnalytics(
       currentPrice: 1,
       investedValue: normalizedCashBalance,
       marketValue: normalizedCashBalance,
+      dividendsReceived: 0,
       pnl: 0,
       pnlPct: 0,
       sharePct: 0,
@@ -235,7 +258,8 @@ export function buildPortfolioPositionsAnalytics(
     .map<ClosedPositionSummary>((item) => {
       const meta = assetById.get(item.assetId);
       const investedCapital = item.realizedCost;
-      const realizedPnlPct = investedCapital > POSITION_EPSILON ? item.realizedPnl / investedCapital : 0;
+      const realizedPnl = item.realizedPnl + item.totalDividends;
+      const realizedPnlPct = investedCapital > POSITION_EPSILON ? realizedPnl / investedCapital : 0;
 
       return {
         assetId: item.assetId,
@@ -243,8 +267,9 @@ export function buildPortfolioPositionsAnalytics(
         name: item.name || meta?.name || "Activo",
         type: item.type || meta?.type || "other",
         currency: meta ? getAssetCurrency(meta) : getAssetCurrency(item.type),
-        realizedPnl: item.realizedPnl,
+        realizedPnl,
         realizedPnlPct,
+        dividendsReceived: item.totalDividends,
         investedCapital,
         quantitySold: item.totalSoldQty,
         avgBuyPrice: item.totalBoughtQty > POSITION_EPSILON ? item.totalBoughtAmount / item.totalBoughtQty : 0,

@@ -136,11 +136,11 @@ Client modal
   -> API verifies session
   -> validates type and required fields by truthiness
   -> readPortfolioById(id, session.userId)
-  -> for buy/sell: readAssetById(assetId)
-  -> for buy/sell: reject with 400 if asset currency != portfolio currency
+  -> for buy/sell/dividend: readAssetById(assetId)
+  -> for buy/sell/dividend: reject with 400 if asset currency != portfolio currency
   -> create Transaction id
   -> prepend transaction to portfolio.transactions
-  -> if buy/sell and asset not in portfolio.assets, copy global asset into portfolio.assets
+  -> if buy/sell/dividend and asset not in portfolio.assets, copy global asset into portfolio.assets
   -> replacePortfolioById(id, portfolio, session.userId)
   -> return full updated portfolio
   -> client replaces local portfolio state
@@ -168,7 +168,7 @@ PortfolioTransactionsTable
   -> API verifies session and required fields
  -> read portfolio
  -> find existing transaction
- -> for buy/sell: verify global asset and ensure embedded portfolio asset exists
+  -> for buy/sell/dividend: verify global asset and ensure embedded portfolio asset exists
  -> replace matching item in portfolio.transactions
  -> replace whole portfolio document
  -> return updated portfolio
@@ -227,6 +227,27 @@ UNKNOWN / REQUIRES CONFIRMATION:
 
 - Cash transactions can be created even when `portfolio.managesCash` is false, but they do not affect metrics in current calculations.
 
+## Dividend Registration
+
+```text
+Client selects transaction type dividend
+  -> API stores transaction with type dividend, assetId + denormalized asset fields,
+     price = total amount received, date, notes, no quantity
+  -> subject to the same asset/portfolio currency invariant as buy/sell
+  -> calculation later:
+       asset positions: pnl/realizedPnl += dividend amount, exposed as dividendsReceived
+       managesCash=true: cashBalance += amount (not a contribution)
+       managesCash=false: portfolio totalPnl += sum of all dividend amounts
+```
+
+Files:
+
+- `src/components/AddTransactionButton.tsx`
+- `src/components/PortfolioTransactionsTable.tsx`
+- `src/app/api/portfolios/[id]/route.ts`
+- `src/lib/portfolio-summary.ts`
+- `src/lib/portfolio-positions.ts`
+
 ## Integration Transaction Ingestion
 
 ```text
@@ -239,7 +260,7 @@ External caller
   -> caller must hold users_permissions { userId, action: "n8n_transactions:create" } (403 otherwise)
   -> readPortfolioById(id); missing or foreign portfolio returns 404
   -> validate type/date/price/notes
-  -> for buy/sell: validate symbol/quantity; resolve the asset with resolveAssetForTransaction (portfolio currency wins over the catalog's duplicated tickers)
+  -> for buy/sell/dividend: validate symbol (+quantity for buy/sell); resolve the asset with resolveAssetForTransaction (portfolio currency wins over the catalog's duplicated tickers)
   -> prepend transaction
   -> replacePortfolioById(id, portfolio, caller.id) scoped by ownerUserId
   -> return { ok, portfolioId, transactionId, transaction }
@@ -281,9 +302,9 @@ already send `assetId` and are unaffected.
 /settings page (Configuración; /export redirects here)
   -> readPortfolios(session.userId) + readAssets({ minimal: true })
   -> TransactionsExportPanel (client-side CSV/JSON download)
-  -> rows carry portfolio_currency, transaction_currency
-     (buy/sell: asset currency via metadata when available, otherwise portfolio currency),
-     asset_currency, asset_price_currency and asset_price_ars
+   -> rows carry portfolio_currency, transaction_currency
+      (buy/sell/dividend: asset currency via metadata when available, otherwise portfolio currency),
+      asset_currency, asset_price_currency and asset_price_ars
   -> asset_price uses the effective price (asset currency; price_ars fallback for legacy cedear)
 ```
 
@@ -293,13 +314,14 @@ already send `assetId` and are unaffected.
 /settings page (Configuración)
   -> TransactionsImportPanel (JSON file upload or paste, example + copy + field help)
   -> JSON shape: { portfolioId, transactions: [{ type, symbol?, quantity?, price, date, notes? }] }
-     - type: buy | sell | cash_in | cash_out
-     - buy/sell require symbol (must exist in assets) + quantity > 0
+     - type: buy | sell | dividend | cash_in | cash_out
+     - buy/sell/dividend require symbol (must exist in assets); buy/sell also require quantity > 0
      - price > 0 and date YYYY-MM-DD always required; notes optional (<= 1000 chars)
-  -> POST /api/portfolios/import-transactions (session auth, portfolio must belong to user)
-  -> atomic server validation: any row error aborts with 400 + per-row errors
-  -> buy/sell rows resolve their asset with resolveAssetForTransaction, considering assets
-     already added by earlier rows of the same batch
+     - for dividend, price is the total amount received (no quantity)
+   -> POST /api/portfolios/import-transactions (session auth, portfolio must belong to user)
+   -> atomic server validation: any row error aborts with 400 + per-row errors
+   -> buy/sell/dividend rows resolve their asset with resolveAssetForTransaction, considering assets
+      already added by earlier rows of the same batch
   -> asset currency must match portfolio currency (same invariant as other transaction APIs)
   -> missing portfolio assets are added; transactions are prepended
 ```
