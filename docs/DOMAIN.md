@@ -81,7 +81,7 @@ Business rules:
 - Name is required for create/update.
 - Normal API reads/writes are owner-scoped.
 - Deleting a portfolio deletes the whole MongoDB document.
-- Currency invariant: `buy`/`sell` transactions are only accepted when the asset currency (`getAssetCurrency()`: explicit `currency` field, falling back to `ARS` for `cedear`, `USD` otherwise) matches the portfolio currency. Enforced in `POST`/`PUT /api/portfolios/[id]` and in the integration ingestion endpoint (`400` on mismatch). Cash transactions carry no asset and are always accepted.
+- Currency invariant: `buy`/`sell`/`dividend` transactions are only accepted when the asset currency (`getAssetCurrency()`: explicit `currency` field, falling back to `ARS` for `cedear`, `USD` otherwise) matches the portfolio currency. Enforced in `POST`/`PUT /api/portfolios/[id]` and in the integration ingestion endpoint (`400` on mismatch). Cash transactions carry no asset and are always accepted.
 
 ### Asset
 
@@ -135,6 +135,7 @@ Types:
 
 - `buy`
 - `sell`
+- `dividend`
 - `cash_in`
 - `cash_out`
 
@@ -142,12 +143,13 @@ Important fields:
 
 - `id`, `type`, `price`, `date`, `notes`.
 - For `buy`/`sell`: `assetId`, `assetSymbol`, `assetName`, `assetType`, `quantity`.
+- For `dividend`: `assetId`, `assetSymbol`, `assetName`, `assetType`; `price` holds the total amount received (no quantity, no unit price).
 - For cash transactions: asset fields and quantity are omitted/undefined by API code.
 
 Business rules:
 
 - UI validates positive quantity/price for asset transactions.
-- UI validates positive amount in `price` for cash transactions.
+- UI validates positive amount in `price` for cash transactions and dividends.
 - Normal portfolio API checks required truthiness but not strict positive/date validity.
 - Integration API has stricter positive number/date/note validation.
 
@@ -155,6 +157,24 @@ UNKNOWN / REQUIRES CONFIRMATION:
 
 - Whether transaction dates should always be valid `YYYY-MM-DD` in normal UI/API flows. Integration enforces it; normal portfolio API mostly trusts the client.
 - Whether overselling should be blocked. Current calculations clamp remaining quantity to zero but do not reject sells.
+
+### Dividend
+
+Purpose:
+
+- Manual record of cash income collected on a specific asset; contributes to that asset's return.
+
+Representation:
+
+- `Transaction` with `type: "dividend"` and `price` = total amount received, in the asset currency.
+
+Business rules:
+
+- Registered like a buy/sell/cash movement: requires asset, date and amount; no quantity.
+- Subject to the same currency invariant as `buy`/`sell` (asset currency must match portfolio currency).
+- Asset-level P/L: open and closed positions add all dividends of the asset to `pnl`/`realizedPnl`; `dividendsReceived` exposes the dividend-only gain.
+- Cash-managed portfolios: dividends increase the cash balance (like a sell) and do not count as contributions.
+- Non-cash portfolios: portfolio `totalPnl` includes the sum of all dividend amounts.
 
 ### Cash And Deposit
 
@@ -176,6 +196,7 @@ Business rules in calculations:
 - `cash_out` decreases cash balance and net contributions.
 - `buy` decreases cash balance.
 - `sell` increases cash balance.
+- `dividend` increases cash balance and does not count as a contribution.
 - Cash appears as synthetic holding in `calculatePortfolioPerformance()`.
 - Cash is listed as the first open position (`Efectivo` / portfolio currency) in portfolio positions when `managesCash` is true; the card is not clickable (cash has no asset detail page) and its dot is always green (`#10b981`).
 

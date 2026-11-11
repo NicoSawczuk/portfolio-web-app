@@ -28,6 +28,7 @@ function buildExampleJson(portfolioId: string) {
       transactions: [
         { type: "buy", symbol: "AAPL", quantity: 10, price: 150.5, date: "2024-01-15" },
         { type: "sell", symbol: "AAPL", quantity: 2, price: 170.25, date: "2024-03-10" },
+        { type: "dividend", symbol: "AAPL", price: 12.5, date: "2024-06-01", notes: "Dividendo trimestral" },
         { type: "cash_in", price: 1000, date: "2024-01-10", notes: "Depósito inicial" },
         { type: "cash_out", price: 200, date: "2024-02-01" },
       ],
@@ -232,19 +233,20 @@ export default function TransactionsImportPanel({ portfolios }: TransactionsImpo
                 <code>portfolioId</code>: ID del portfolio destino (lo ves en el selector de abajo).
               </li>
               <li>
-                <code>type</code>: <code>buy</code> | <code>sell</code> | <code>cash_in</code> |{" "}
-                <code>cash_out</code>.
+                <code>type</code>: <code>buy</code> | <code>sell</code> | <code>dividend</code> |{" "}
+                <code>cash_in</code> | <code>cash_out</code>.
               </li>
               <li>
-                <code>symbol</code>: obligatorio solo para <code>buy</code>/<code>sell</code> (ej: AAPL,
-                BTC). Debe existir en la lista de activos.
+                <code>symbol</code>: obligatorio solo para <code>buy</code>/<code>sell</code>/
+                <code>dividend</code> (ej: AAPL, BTC). Debe existir en la lista de activos.
               </li>
               <li>
                 <code>quantity</code>: obligatoria para <code>buy</code>/<code>sell</code>, número mayor a
-                cero.
+                cero. Para <code>dividend</code> no se usa.
               </li>
               <li>
-                <code>price</code>: obligatorio siempre, número mayor a cero.
+                <code>price</code>: obligatorio siempre, número mayor a cero. Para <code>dividend</code> es
+                el monto total cobrado.
               </li>
               <li>
                 <code>date</code>: obligatoria, formato <code>YYYY-MM-DD</code>.

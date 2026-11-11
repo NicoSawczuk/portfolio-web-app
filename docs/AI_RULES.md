@@ -50,7 +50,7 @@ Before changing transactions, holdings, cash, prices or performance:
 
 - Check the relevant domain and calculation rules.
 - Preserve transaction semantics and ordering.
-- Do not invent fees, taxes, FX, dividends, splits or other financial behavior that the application does not currently model.
+- Do not invent fees, taxes, FX, splits or other financial behavior that the application does not currently model. Dividends are modeled via `dividend` transactions (see `docs/CALCULATIONS.md`).
 - Do not silently change how current prices, cost basis, P/L, cash or performance are derived.
 - Do not alter historical transaction data unless explicitly requested.
 - Be especially careful with buy/sell behavior, oversells, cash movements and embedded portfolio data.

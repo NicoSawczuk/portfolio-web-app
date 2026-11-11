@@ -61,6 +61,7 @@ function toTxType(csvType) {
   const normalized = normalizeText(csvType);
   if (normalized === "compra") return "buy";
   if (normalized === "venta") return "sell";
+  if (normalized === "dividendo") return "dividend";
   if (normalized === "deposito" || normalized === "deposito") return "cash_in";
   return "cash_out";
 }
@@ -159,6 +160,26 @@ for (const trade of trades) {
   const symbol = rawSymbol === "BTC-USD" ? "BTC" : rawSymbol;
   const asset = assetBySymbol.get(symbol);
   if (!asset) continue;
+
+  if (txType === "dividend") {
+    // El dividendo registra el monto total cobrado; la cantidad no aplica.
+    // Se acepta el monto desde la columna de precio o, si viene vacía, desde
+    // la columna de cantidad (mismo criterio que las filas de efectivo).
+    const amount = Number(trade.price || 0) || Math.abs(Number(trade.quantity || 0));
+
+    portfolio.transactions.push({
+      id: makeId(),
+      type: "dividend",
+      assetId: asset.id,
+      assetSymbol: symbol,
+      assetName: asset.name,
+      assetType: asset.type,
+      price: amount,
+      date: trade.date,
+      notes,
+    });
+    continue;
+  }
 
   portfolio.transactions.push({
     id: makeId(),

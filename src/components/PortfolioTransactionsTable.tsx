@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from "react";
 import type { Asset, AssetCurrency, Portfolio, Transaction, TransactionType } from "@/lib/portfolio";
-import { getAssetCurrency, getAssetCurrentPrice, getPortfolioCurrency } from "@/lib/portfolio";
+import {
+  getAssetCurrency,
+  getAssetCurrentPrice,
+  getPortfolioCurrency,
+  isAssetLinkedTransactionType,
+  isAssetQuantityTransactionType,
+} from "@/lib/portfolio";
 
 function formatCurrency(value: number, currency: AssetCurrency = "USD") {
   const formatter = new Intl.NumberFormat("de-DE", {
@@ -18,7 +24,7 @@ function getTransactionCurrency(
   portfolioCurrency: AssetCurrency = "USD",
   assetMeta?: Asset
 ) {
-  if (transaction.type === "buy" || transaction.type === "sell") {
+  if (isAssetLinkedTransactionType(transaction.type)) {
     // La moneda real la define el activo cuando hay metadata (ej. acción en ARS).
     if (assetMeta) {
       return getAssetCurrency(assetMeta);
@@ -34,6 +40,7 @@ function getTransactionCurrency(
 const transactionTypes: Array<{ value: TransactionType; label: string }> = [
   { value: "buy", label: "Compra" },
   { value: "sell", label: "Venta" },
+  { value: "dividend", label: "Dividendo" },
   { value: "cash_in", label: "Ingreso" },
   { value: "cash_out", label: "Egreso" },
 ];
@@ -41,6 +48,7 @@ const transactionTypes: Array<{ value: TransactionType; label: string }> = [
 const assetOnlyTransactionTypes: Array<{ value: TransactionType; label: string }> = [
   { value: "buy", label: "Compra" },
   { value: "sell", label: "Venta" },
+  { value: "dividend", label: "Dividendo" },
 ];
 
 function getTodayDateInputValue() {
@@ -78,10 +86,6 @@ function normalizeSearchText(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
-}
-
-function isAssetTransactionType(type: TransactionType) {
-  return type === "buy" || type === "sell";
 }
 
 function getTransactionTypeLabel(type: TransactionType) {
@@ -178,15 +182,15 @@ export default function PortfolioTransactionsTable({
         return transaction.assetId === lockedAssetId;
       })
       .map((transaction) => {
-        const isAssetTransaction = isAssetTransactionType(transaction.type);
+        const isAssetLinked = isAssetLinkedTransactionType(transaction.type);
         const assetMeta = transaction.assetId ? assetsById.get(transaction.assetId) : undefined;
 
         return {
           ...transaction,
           assetId: transaction.assetId ?? "",
-          assetName: transaction.assetName?.trim() || "Efectivo",
-          assetSymbol: transaction.assetSymbol?.trim() || (isAssetTransaction ? "" : "Efectivo"),
-          assetType: transaction.assetType || (isAssetTransaction ? "other" : "cash"),
+          assetName: transaction.assetName?.trim() || (isAssetLinked ? "Activo" : "Efectivo"),
+          assetSymbol: transaction.assetSymbol?.trim() || (isAssetLinked ? "" : "Efectivo"),
+          assetType: transaction.assetType || (isAssetLinked ? "other" : "cash"),
           currency: getTransactionCurrency(transaction, portfolioCurrency, assetMeta),
         };
       });
@@ -236,7 +240,8 @@ export default function PortfolioTransactionsTable({
   }, [boundedCurrentPage, filteredTransactions, transactionsPerPage]);
 
   const getTransactionAmount = (transaction: TransactionRow) => {
-    if (!isAssetTransactionType(transaction.type)) {
+    if (!isAssetQuantityTransactionType(transaction.type)) {
+      // Efectivo y dividendo: el monto total se guarda en `price`.
       const amount = Number(transaction.price ?? 0);
       return Number.isFinite(amount) ? amount : null;
     }
@@ -285,15 +290,21 @@ export default function PortfolioTransactionsTable({
   };
 
   const handleSaveTransaction = async () => {
-    const isAssetTransaction = isAssetTransactionType(transactionForm.type);
+    const isAssetLinked = isAssetLinkedTransactionType(transactionForm.type);
+    const isQuantityTransaction = isAssetQuantityTransactionType(transactionForm.type);
     const assetId = lockedAssetId || transactionForm.assetId;
     const quantity = parsePositiveDecimalInput(transactionForm.quantity);
     const price = parsePositiveDecimalInput(transactionForm.price);
-    const selectedAsset = isAssetTransaction ? assets.find((asset) => asset.id === assetId) : null;
+    const selectedAsset = isAssetLinked ? assets.find((asset) => asset.id === assetId) : null;
 
-    if (isAssetTransaction) {
+    if (isQuantityTransaction) {
       if (!assetId || !transactionForm.date || !quantity || !price) {
         setError("Seleccioná un activo, fecha, cantidad y precio.");
+        return;
+      }
+    } else if (isAssetLinked) {
+      if (!assetId || !transactionForm.date || !price) {
+        setError("Seleccioná un activo, fecha y monto del dividendo.");
         return;
       }
     } else if (!transactionForm.date || !price) {
@@ -312,11 +323,11 @@ export default function PortfolioTransactionsTable({
           kind: "transaction",
           transactionId: editingTransaction?.id,
           type: transactionForm.type,
-          assetId: isAssetTransaction ? assetId : undefined,
-          assetSymbol: isAssetTransaction ? selectedAsset?.symbol || "" : "Efectivo",
-          assetName: isAssetTransaction ? selectedAsset?.name || "" : "Efectivo",
-          assetType: isAssetTransaction ? selectedAsset?.type || "stock" : "cash",
-          quantity: isAssetTransaction ? quantity : undefined,
+          assetId: isAssetLinked ? assetId : undefined,
+          assetSymbol: isAssetLinked ? selectedAsset?.symbol || "" : "Efectivo",
+          assetName: isAssetLinked ? selectedAsset?.name || "" : "Efectivo",
+          assetType: isAssetLinked ? selectedAsset?.type || "stock" : "cash",
+          quantity: isQuantityTransaction ? quantity : undefined,
           price,
           date: transactionForm.date,
           notes: transactionForm.notes,
@@ -554,14 +565,17 @@ export default function PortfolioTransactionsTable({
                     setTransactionForm((current) => {
                       const nextForm = { ...current, type: nextType };
 
-                      if (!isAssetTransactionType(nextType)) {
+                      if (!isAssetQuantityTransactionType(nextType)) {
                         if (!nextForm.price && nextForm.quantity) {
                           nextForm.price = nextForm.quantity;
                         }
                         nextForm.quantity = "1";
-                        nextForm.assetId = "";
                       } else if (!nextForm.quantity) {
                         nextForm.quantity = "1";
+                      }
+
+                      if (!isAssetLinkedTransactionType(nextType)) {
+                        nextForm.assetId = "";
                       }
 
                       if (lockedAssetId) {
@@ -581,7 +595,7 @@ export default function PortfolioTransactionsTable({
                 </select>
               </label>
 
-              {isAssetTransactionType(transactionForm.type) ? (
+              {isAssetLinkedTransactionType(transactionForm.type) ? (
                 lockedAssetId ? (
                   <label className="modal-field">
                     Activo
@@ -643,7 +657,7 @@ export default function PortfolioTransactionsTable({
                 )
               ) : null}
 
-              {isAssetTransactionType(transactionForm.type) ? (
+              {isAssetQuantityTransactionType(transactionForm.type) ? (
                 <>
                   <div className="modal-form-grid modal-form-grid--single">
                     <label className="modal-field">
@@ -696,7 +710,7 @@ export default function PortfolioTransactionsTable({
                   </label>
 
                   <label className="modal-field">
-                    Monto ({portfolioCurrency})
+                    {transactionForm.type === "dividend" ? "Monto cobrado" : "Monto"} ({portfolioCurrency})
                     <input
                       type="text"
                       inputMode="decimal"

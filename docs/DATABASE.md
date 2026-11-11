@@ -234,13 +234,13 @@ Embedded transaction fields:
 | Field | Type | Notes |
 | --- | --- | --- |
 | `id` | string | Generated from ObjectId. |
-| `type` | string | `buy`, `sell`, `cash_in`, `cash_out`. |
-| `assetId` | string/undefined | Present for buy/sell. |
+| `type` | string | `buy`, `sell`, `dividend`, `cash_in`, `cash_out`. |
+| `assetId` | string/undefined | Present for buy/sell/dividend. |
 | `assetSymbol` | string/undefined | Denormalized metadata. |
 | `assetName` | string/undefined | Denormalized metadata. |
 | `assetType` | string/undefined | Denormalized metadata. |
 | `quantity` | number/undefined | Present for buy/sell. |
-| `price` | number | Unit price for buy/sell, amount for cash. |
+| `price` | number | Unit price for buy/sell, amount for cash and dividend. |
 | `date` | string | Expected date input value. |
 | `notes` | string/undefined | Optional. |
 

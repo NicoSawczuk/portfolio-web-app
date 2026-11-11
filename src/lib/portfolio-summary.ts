@@ -13,6 +13,7 @@ export interface PortfolioHoldingSummary {
   currentPrice: number;
   marketValue: number;
   costBasis: number;
+  dividendsReceived: number;
   pnl: number;
   pnlPct: number;
 }
@@ -58,6 +59,7 @@ function applyTransactionToHoldings(
     currentPrice: 0,
     marketValue: 0,
     costBasis: 0,
+    dividendsReceived: 0,
     pnl: 0,
     pnlPct: 0,
   };
@@ -78,6 +80,13 @@ function applyTransactionToHoldings(
       existing.quantity = Math.max(0, existing.quantity - quantity);
       existing.totalCost = Math.max(0, existing.totalCost - costToRemove);
       existing.avgBuyPrice = existing.quantity ? existing.totalCost / existing.quantity : 0;
+    }
+  }
+
+  if (transaction.type === "dividend") {
+    const amount = Number(transaction.price ?? 0);
+    if (Number.isFinite(amount) && amount > 0) {
+      existing.dividendsReceived += amount;
     }
   }
 
@@ -110,6 +119,12 @@ function getCashMovement(transaction: Transaction): CashMovement {
     return { balanceDelta: -amount, contributionDelta: -amount };
   }
 
+  // El dividendo es efectivo cobrado: aumenta el saldo pero no es un aporte
+  // del titular, por lo que queda contemplado en el resultado del portfolio.
+  if (transaction.type === "dividend") {
+    return { balanceDelta: amount, contributionDelta: 0 };
+  }
+
   if (transaction.type === "buy" || transaction.type === "sell") {
     const quantity = Number(transaction.quantity ?? 0);
     if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -121,6 +136,23 @@ function getCashMovement(transaction: Transaction): CashMovement {
   }
 
   return { balanceDelta: 0, contributionDelta: 0 };
+}
+
+export function calculateTotalDividends(portfolio: Portfolio | null | undefined): number {
+  let totalDividends = 0;
+
+  for (const transaction of portfolio?.transactions ?? []) {
+    if (transaction.type !== "dividend") {
+      continue;
+    }
+
+    const amount = Number(transaction.price ?? 0);
+    if (Number.isFinite(amount) && amount > 0) {
+      totalDividends += amount;
+    }
+  }
+
+  return totalDividends;
 }
 
 export interface CashTotals {
@@ -176,7 +208,7 @@ export function calculatePortfolioPerformance(
       const currency = assetMeta ? getAssetCurrency(assetMeta) : getAssetCurrency(item.type);
       const marketValue = item.quantity * currentPrice;
       const costBasis = item.quantity * item.avgBuyPrice;
-      const pnl = marketValue - costBasis;
+      const pnl = marketValue - costBasis + item.dividendsReceived;
       const pnlPct = costBasis > 0 ? pnl / costBasis : 0;
 
       return {
@@ -206,6 +238,7 @@ export function calculatePortfolioPerformance(
       currentPrice: 1,
       marketValue: normalizedCashBalance,
       costBasis: normalizedCashBalance,
+      dividendsReceived: 0,
       pnl: 0,
       pnlPct: 0,
     });
@@ -219,7 +252,11 @@ export function calculatePortfolioPerformance(
   const totalCostBasis = managesCash
     ? cashNetContributions
     : holdingsList.reduce((sum, item) => sum + item.costBasis, 0);
-  const totalPnl = totalMarketValue - totalCostBasis;
+  // Los portfolios que gestionan efectivo ya contemplan los dividendos en el
+  // saldo de caja (ingresan al balance sin contar como aporte). Para el resto,
+  // se suman al resultado porque son ganancia cobrada del activo.
+  const totalDividends = managesCash ? 0 : calculateTotalDividends(portfolio);
+  const totalPnl = totalMarketValue - totalCostBasis + totalDividends;
   const totalPnlPct = totalCostBasis > 0 ? totalPnl / totalCostBasis : 0;
 
   const assetTypeBreakdown = holdingsList.reduce<Record<string, { type: Asset["type"]; marketValue: number }>>((acc, item) => {

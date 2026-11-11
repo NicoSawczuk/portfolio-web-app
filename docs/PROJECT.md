@@ -27,7 +27,7 @@ Business intent from `AI Project Audit - Portfolio Web App.md`:
 Current implementation:
 
 - Supports asset types `stock`, `etf`, `crypto`, `bond`, `cash`, `other`, `cedear`.
-- Records transactions of type `buy`, `sell`, `cash_in`, `cash_out`.
+- Records transactions of type `buy`, `sell`, `dividend`, `cash_in`, `cash_out`.
 - Uses the effective global asset price for current market values (`getAssetCurrentPrice()`: `price` in the asset currency, `price_ars` fallback for legacy `cedear`). Assets carry an explicit `currency` (`USD`/`ARS`), enabling ARS stocks.
 - Calculates holdings, cash and P/L from transaction arrays at render/query time.
 
@@ -53,6 +53,7 @@ UNKNOWN / REQUIRES CONFIRMATION:
 | Portfolios | CRUD on user-scoped `portfolios` collection. |
 | Transactions | Embedded in portfolio documents and edited through `/api/portfolios/[id]`. |
 | Cash movements | `cash_in` and `cash_out` transactions. |
+| Dividends | `dividend` transactions tied to an asset; amount in `price`, part of the asset's P/L. |
 | Portfolio metrics | Derived by `src/lib/portfolio-summary.ts`. |
 | Open/closed positions | Derived by `src/lib/portfolio-positions.ts`. |
 | Export | Client-side CSV/JSON from server-loaded portfolios/assets, with currency columns (`portfolio_currency`, `transaction_currency`, `asset_currency`, `asset_price_currency`, `asset_price_ars`). |
@@ -86,7 +87,7 @@ Portfolio fields:
 - `ownerUserId`
 - `name`
 - `description`
-- `currency` (`USD`/`ARS`, set at creation; filters the portfolio list and gates buy/sell by asset currency)
+- `currency` (`USD`/`ARS`, set at creation; filters the portfolio list and gates buy/sell/dividend by asset currency)
 - `managesCash`
 - `createdAt`
 - `assets`
@@ -110,6 +111,7 @@ Current implementation:
 - `cash_out`: decreases cash balance and net contributions.
 - `buy`: decreases cash balance by `quantity * price`.
 - `sell`: increases cash balance by `quantity * price`.
+- `dividend`: increases cash balance by the received amount; does not count as a contribution.
 - Cash is shown as a synthetic holding with assetId `cash:<portfolio.id>` and the portfolio currency as symbol.
 - Cash is listed as the first open position (`Efectivo` / portfolio currency) in the portfolio detail when `managesCash` is true. The card is not clickable, its dot is always green, and open-position allocation (`sharePct`) is measured including cash.
 
@@ -124,7 +126,7 @@ UNKNOWN / REQUIRES CONFIRMATION:
 - Create a portfolio, optionally enabling cash management.
 - Create global assets and optionally set `id_partner` for crypto.
 - Refresh global asset prices manually.
-- Add buy/sell/cash transactions to a portfolio.
+- Add buy/sell/dividend/cash transactions to a portfolio.
 - View open positions, closed positions and transaction history.
 - Export transactions.
 - Ingest transactions from an external integration via API key.

@@ -2,7 +2,12 @@
 
 import { useMemo, useState } from "react";
 import type { Asset, AssetCurrency, Portfolio, TransactionType } from "@/lib/portfolio";
-import { getAssetCurrency, getAssetCurrentPrice } from "@/lib/portfolio";
+import {
+  getAssetCurrency,
+  getAssetCurrentPrice,
+  isAssetLinkedTransactionType,
+  isAssetQuantityTransactionType,
+} from "@/lib/portfolio";
 import { formatCurrency } from "@/lib/portfolio-format";
 
 const assetTransactionTypes: Array<{ value: TransactionType; label: string }> = [
@@ -12,6 +17,7 @@ const assetTransactionTypes: Array<{ value: TransactionType; label: string }> = 
 
 const allTransactionTypes: Array<{ value: TransactionType; label: string }> = [
   ...assetTransactionTypes,
+  { value: "dividend", label: "Dividendo" },
   { value: "cash_in", label: "Ingreso" },
   { value: "cash_out", label: "Egreso" },
 ];
@@ -51,10 +57,6 @@ function normalizeSearchText(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
-}
-
-function isAssetTransactionType(type: TransactionType) {
-  return type === "buy" || type === "sell";
 }
 
 interface AddTransactionButtonProps {
@@ -121,14 +123,20 @@ export default function AddTransactionButton({
   };
 
   const handleSave = async () => {
-    const isAssetTransaction = isAssetTransactionType(form.type);
+    const isAssetLinked = isAssetLinkedTransactionType(form.type);
+    const isQuantityTransaction = isAssetQuantityTransactionType(form.type);
     const quantity = parsePositiveDecimalInput(form.quantity);
     const price = parsePositiveDecimalInput(form.price);
-    const selectedAsset = isAssetTransaction ? assets.find((asset) => asset.id === form.assetId) : null;
+    const selectedAsset = isAssetLinked ? assets.find((asset) => asset.id === form.assetId) : null;
 
-    if (isAssetTransaction) {
+    if (isQuantityTransaction) {
       if (!form.assetId || !form.date || !quantity || !price) {
         setError("Seleccioná un activo, fecha, cantidad y precio.");
+        return;
+      }
+    } else if (isAssetLinked) {
+      if (!form.assetId || !form.date || !price) {
+        setError("Seleccioná un activo, fecha y monto del dividendo.");
         return;
       }
     } else if (!form.date || !price) {
@@ -146,11 +154,11 @@ export default function AddTransactionButton({
         body: JSON.stringify({
           kind: "transaction",
           type: form.type,
-          assetId: isAssetTransaction ? form.assetId : undefined,
-          assetSymbol: isAssetTransaction ? selectedAsset?.symbol || "" : "Efectivo",
-          assetName: isAssetTransaction ? selectedAsset?.name || "" : "Efectivo",
-          assetType: isAssetTransaction ? selectedAsset?.type || "stock" : "cash",
-          quantity: isAssetTransaction ? quantity : undefined,
+          assetId: isAssetLinked ? form.assetId : undefined,
+          assetSymbol: isAssetLinked ? selectedAsset?.symbol || "" : "Efectivo",
+          assetName: isAssetLinked ? selectedAsset?.name || "" : "Efectivo",
+          assetType: isAssetLinked ? selectedAsset?.type || "stock" : "cash",
+          quantity: isQuantityTransaction ? quantity : undefined,
           price,
           date: form.date,
           notes: form.notes,
@@ -211,14 +219,17 @@ export default function AddTransactionButton({
                     setForm((current) => {
                       const nextForm = { ...current, type: nextType };
 
-                      if (!isAssetTransactionType(nextType)) {
+                      if (!isAssetQuantityTransactionType(nextType)) {
                         if (!nextForm.price && nextForm.quantity) {
                           nextForm.price = nextForm.quantity;
                         }
                         nextForm.quantity = "1";
-                        nextForm.assetId = "";
                       } else if (!nextForm.quantity) {
                         nextForm.quantity = "1";
+                      }
+
+                      if (!isAssetLinkedTransactionType(nextType)) {
+                        nextForm.assetId = "";
                       }
 
                       return nextForm;
@@ -234,7 +245,7 @@ export default function AddTransactionButton({
                 </select>
               </label>
 
-              {isAssetTransactionType(form.type) ? (
+              {isAssetLinkedTransactionType(form.type) ? (
                 <label className="modal-field">
                   Activo
                   <div className="modal-inline-controls modal-inline-controls--asset-picker">
@@ -286,7 +297,7 @@ export default function AddTransactionButton({
                 </label>
               ) : null}
 
-              {isAssetTransactionType(form.type) ? (
+              {isAssetQuantityTransactionType(form.type) ? (
                 <>
                   <div className="modal-form-grid modal-form-grid--single">
                     <label className="modal-field">
@@ -339,7 +350,7 @@ export default function AddTransactionButton({
                   </label>
 
                   <label className="modal-field">
-                    Monto ({portfolioCurrency})
+                    {form.type === "dividend" ? "Monto cobrado" : "Monto"} ({portfolioCurrency})
                     <input
                       type="text"
                       inputMode="decimal"
