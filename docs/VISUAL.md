@@ -141,6 +141,7 @@ Home:        .home-hero-card, .home-hero-value/sub/side/mini, .home-donut-*, .ho
 Assets:      .assets-* (toolbar, search, rows, badges, pagination)
 Detail:      .portfolio-detail-* + .asset-detail-* (top/back/heading/summary/primary/secondary)
 Modal/auth:  .modal(-backdrop/-narrow/-header/-form/-actions), .auth-*, .alert-error/success
+Loading:     .page-loader > .page-loader-ring (route-level loading.tsx via PageLoader)
 ```
 
 asset-detail pattern (reference, see `PortfolioV3AssetDetailClient.tsx`):

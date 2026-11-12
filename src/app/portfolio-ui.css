@@ -17,6 +17,7 @@
   --portfolio-text-subtle: #64748b;
   --portfolio-accent: #6366f1;
   --portfolio-accent-hover: #818cf8;
+  --portfolio-overlay-backdrop: rgb(2 6 23 / 0.55);
 }
 
 .portfolio-page {
@@ -2172,6 +2173,7 @@ body:has(.modal-backdrop) {
   --portfolio-text-subtle: #64748b;
   --portfolio-accent: #4f46e5;
   --portfolio-accent-hover: #4338ca;
+  --portfolio-overlay-backdrop: rgb(15 23 42 / 0.35);
   --gain-positive: #059669;
   --gain-negative: #dc2626;
 }
@@ -3029,4 +3031,32 @@ body:has(.modal-backdrop) {
 
 [data-theme="light"] .dollar-editor {
   background: #eef2f7;
+}
+
+.page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  background: var(--portfolio-overlay-backdrop);
+  pointer-events: none;
+}
+
+.page-loader-ring {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--portfolio-border);
+  border-top-color: var(--portfolio-accent);
+  border-radius: 9999px;
+  animation: assets-spin 0.75s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-loader-ring {
+    animation-duration: 1.5s;
+  }
 }
