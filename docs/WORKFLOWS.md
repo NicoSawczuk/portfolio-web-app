@@ -391,3 +391,21 @@ Important:
 
 - Normal dashboard loading does not refresh prices from external providers.
 
+## Navigation Loading
+
+Every route segment with a `page.tsx` exposes a route-level `loading.tsx` that renders the shared spinner (`src/components/PageLoader.tsx` → `.page-loader > .page-loader-ring` in `portfolio-ui.css`). Next.js streams that fallback during client navigations while the dynamic page (cookies + MongoDB reads) renders on the server.
+
+- The spinner shows no visible text; accessibility relies on `role="status"` + `aria-label`.
+- It renders as a fixed overlay above the header (`z-index: 60`, translucent token-based backdrop) with `pointer-events: none`, so navigation stays interruptible.
+- `src/app/loading.tsx` covers the root `/` page. Nested segments have their own file so each page can evolve its fallback independently.
+- Legacy redirect-only routes (`/configuracion*`, `/export`) intentionally have none, since they resolve via server redirect.
+- When adding a new page, add a `loading.tsx` next to its `page.tsx`:
+
+```tsx
+import PageLoader from "@/components/PageLoader";
+
+export default function Loading() {
+  return <PageLoader />;
+}
+```
+
